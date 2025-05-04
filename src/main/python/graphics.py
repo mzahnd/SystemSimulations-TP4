@@ -58,7 +58,7 @@ FIGSIZE = (1920 / DPI, 1080 / DPI)
 # ------------------------------
 
 
-@dataclass
+@dataclass(frozen=True, eq=True)
 class SimulationParameters:
     mass: float
     k: int
@@ -67,6 +67,20 @@ class SimulationParameters:
     v0: float
     amplitude: int
     seed: int
+
+
+@dataclass(frozen=True, eq=True)
+class Instant:
+    t: float
+    r: float
+    v: float
+    a: float
+
+
+@dataclass
+class Output:
+    params: SimulationParameters
+    values: list[Instant]
 
 
 def format_power_of_10(x):
@@ -92,64 +106,43 @@ def y_fmt(x, pos):
     return format_power_of_10(x)
 
 
-def plot_pressure(pressure_df: pd.DataFrame, output_dir: str):
-    plot_df = pressure_df.reset_index().rename(
-        columns={"pressure_container": "container", "pressure_obstacle": "obstacle"}
-    )
-    unified_plot_df = pressure_df.reset_index().melt(  # index to column
-        id_vars="time",
-        value_vars=["pressure_container", "pressure_obstacle"],
-        var_name="boundary",
-        value_name="pressure_Pa",
-    )
+def calculate_oscilator(simulation_output: Output):
+    params = simulation_output.params
 
-    # Unified plot
-    plt.figure(figsize=FIGSIZE)
-    sns.lineplot(
-        data=unified_plot_df,
-        x="time",
-        y="pressure_Pa",
-        hue="boundary",
-        style="boundary",
+    gamma_over_2m = params.gamma / (2 * params.mass)
+    k_over_m = params.k / params.mass
+    gamma_square_over_4m2 = (params.gamma * params.gamma) / (
+        4 * params.mass * params.mass
     )
-    plt.xlabel("Tiempo (t)", fontsize=14)
-    plt.ylabel("Presión (Pa)", fontsize=14)
-    plt.grid(True)
-    # plt.show()
-    plt.savefig(f"./{output_dir}/pressure.png")
-    plt.clf()
-    plt.close()
+    cos_constant = np.sqrt(k_over_m - gamma_square_over_4m2)
 
-    # Container only
-    plt.figure(figsize=FIGSIZE)
-    sns.lineplot(data=plot_df, x="time", y="container")
-    plt.xlabel("Tiempo (t)", fontsize=14)
-    plt.ylabel("Presión (N/m²)", fontsize=14)
-    plt.grid(True)
-    # plt.show()
-    plt.savefig(f"./{output_dir}/pressure_container.png")
-    plt.clf()
-    plt.close()
+    def r_t(t: float):
+        return (
+            params.amplitude * np.exp(t * gamma_over_2m * -1) * np.cos(t * cos_constant)
+        )
 
-    # Obstacle only
-    plt.figure(figsize=FIGSIZE)
-    sns.lineplot(data=plot_df, x="time", y="obstacle")
-    plt.xlabel("Tiempo (t)", fontsize=14)
-    plt.ylabel("Presión (N/m²)", fontsize=14)
-    plt.grid(True)
-    # plt.show()
-    plt.savefig(f"./{output_dir}/pressure_obstacle.png")
-    plt.clf()
-    plt.close()
+    return [
+        Instant(t=out.t, r=r_t(out.t), v=0.0, a=0.0) for out in simulation_output.values
+    ]
 
 
 def plot_verlet(
-    simulation_params: SimulationParameters,
-    df: pd.DataFrame,
+    simulation_output: Output,
     output_dir: str,
 ):
+    df_plot = pd.DataFrame(simulation_output.values)
+
+    oscilator = calculate_oscilator(simulation_output)
+    df_plot_oscilator = pd.DataFrame(oscilator)
+    print(df_plot_oscilator)
+
     plt.figure(figsize=FIGSIZE)
-    sns.lineplot(df.index, df["r"], markers=True)
+
+    ax = sns.lineplot(data=df_plot, x="t", y="r", markers=True, label="Estimado")
+    sns.lineplot(
+        data=df_plot_oscilator, x="t", y="r", ax=ax, label="Solución Analítica"
+    )
+
     plt.xlabel("Tiempo (s)")
     plt.ylabel("Posición (m)")
     plt.grid(True)
@@ -178,9 +171,13 @@ def read_csv(filepath: str):
         index_col=None,  # don't use any column as index
         skiprows=2,  # number of rows to skip
     )
-    df.set_index("time", inplace=True)
+    df = df.sort_values("time")
+    values = [
+        Instant(t=row.time, r=row.r, v=row.v, a=row.a)
+        for row in df.itertuples(index=False)
+    ]
 
-    return config, df
+    return Output(params=config, values=values)
 
 
 def main(output_file: str):
@@ -188,10 +185,9 @@ def main(output_file: str):
     output_base_dir = "./graphics"
     os.makedirs(output_base_dir, exist_ok=True)
 
-    simulation_params, df = read_csv(f"{input_dir}/{output_file}")
-    print(df)
+    simulation_output = read_csv(f"{input_dir}/{output_file}")
 
-    plot_verlet(simulation_params, df, output_base_dir)
+    plot_verlet(simulation_output, output_base_dir)
 
 
 if __name__ == "__main__":
@@ -202,9 +198,6 @@ if __name__ == "__main__":
         "-f", "--output_file", type=str, required=True, help="Output file to animate"
     )
 
-    # args = parser.parse_args()
+    args = parser.parse_args()
 
-    main(
-        # output_file=args.output_file,
-        output_file="mass-70_0_k-10000_y-100_t-5_0_v0--0_7142857142857143_r0-1_0_seed-1743645648280.csv",
-    )
+    main(output_file=args.output_file)
