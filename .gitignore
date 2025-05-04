@@ -130,6 +130,7 @@ analysis/
 
 ### Outputs ###
 output/
+graphics/
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
