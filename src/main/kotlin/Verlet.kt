@@ -6,7 +6,7 @@ import ch.obermuhlner.math.big.kotlin.bigdecimal.plus
 import ch.obermuhlner.math.big.kotlin.bigdecimal.times
 import java.math.BigDecimal
 
-class Verlet(settings: Settings, initialAcceleration: BigDecimal) : Algorithm {
+class Verlet(settings: Settings, acceleration: (settings: Settings, currentPosition: BigDecimal, currentVelocity: BigDecimal) -> BigDecimal) : Algorithm {
     var _previousPosition: BigDecimal
     var _nextPosition: BigDecimal
 
@@ -22,6 +22,7 @@ class Verlet(settings: Settings, initialAcceleration: BigDecimal) : Algorithm {
         get() = _currentPosition
 
     init {
+        val initialAcceleration = acceleration(settings, settings.r0, settings.v0)
         val euler = Euler(settings, -1 * settings.deltaT)
         euler.advanceDeltaT(initialAcceleration)
 

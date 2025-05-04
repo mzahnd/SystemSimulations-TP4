@@ -38,7 +38,7 @@ class Simulation(
         )
 
         // Header
-        output.send("time,r,v,a\n")
+        output.send("time,r,v\n")
 
         createLocalMathContext(16).use {
             while (currentTime <= settings.simulationTime) {

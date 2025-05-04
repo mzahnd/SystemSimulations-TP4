@@ -101,6 +101,9 @@ class Cli : CliktCommand() {
             val verlet = initializeVerlet(coroutineScope)
             simulationJobs.add(verlet)
 
+            val beeman = initializeBeeman(coroutineScope)
+            simulationJobs.add(beeman)
+
             simulationJobs.forEach { it.simulationJob.join() }
             logger.info { "All simulations finished. Waiting for writer to finish." }
 
@@ -114,12 +117,21 @@ class Cli : CliktCommand() {
         }
     }
 
+    private fun initializeBeeman(scope: CoroutineScope): SimulationJob {
+        val settings = buildSettings(Beeman.PRETTY_NAME)
+        return initializeAlgorithm(
+            settings = settings,
+            algorithm = Beeman(settings, Simulation::calculateAcceleration),
+            scope = scope,
+        )
+    }
+
     private fun initializeVerlet(scope: CoroutineScope): SimulationJob {
         val settings = buildSettings(Verlet.PRETTY_NAME)
         return initializeAlgorithm(
             settings = settings,
             algorithm = Verlet(
-                settings, Simulation.calculateAcceleration(settings, settings.r0, settings.v0)
+                settings, Simulation::calculateAcceleration
             ),
             scope = scope,
         )
@@ -133,7 +145,6 @@ class Cli : CliktCommand() {
             scope = scope,
         )
     }
-
 
     private fun buildFileName(algorithmName: String): String =
         buildString {

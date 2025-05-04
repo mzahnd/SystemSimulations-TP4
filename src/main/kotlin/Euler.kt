@@ -6,6 +6,7 @@ import java.math.BigDecimal
 class Euler(settings: Settings, val deltaT: BigDecimal) : Algorithm {
     var _currentVelocity: BigDecimal = settings.v0
     var _currentPosition: BigDecimal = settings.r0
+    var _currentAcceleration: BigDecimal = BigDecimal.ZERO
 
     val deltaTSquared = settings.deltaT * settings.deltaT
 
@@ -18,6 +19,7 @@ class Euler(settings: Settings, val deltaT: BigDecimal) : Algorithm {
         val nextVelocity = calculateNextVelocity(acceleration)
         _currentVelocity = nextVelocity
         _currentPosition = calculateNextPosition(acceleration, nextVelocity)
+        _currentAcceleration = acceleration
     }
 
     private fun calculateNextVelocity(acceleration: BigDecimal): BigDecimal =
