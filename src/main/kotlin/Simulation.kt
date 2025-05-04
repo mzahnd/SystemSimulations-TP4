@@ -10,7 +10,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
-import kotlin.math.log
 
 class Simulation(
     private val settings: Settings,
@@ -24,9 +23,10 @@ class Simulation(
 
     suspend fun simulate() = withContext(dispatcher) {
         // Params
-        output.send("m,k,y,r0,v0,A,seed\n")
+        output.send("dT,m,k,y,r0,v0,A,seed\n")
         output.send(
             listOf(
+                "%.6f".format(settings.deltaT),
                 "%.8f".format(settings.mass),
                 settings.k,
                 settings.gamma,
@@ -38,7 +38,7 @@ class Simulation(
         )
 
         // Header
-        output.send("time,r,v\n")
+        output.send("time,r,v,a\n")
 
         createLocalMathContext(16).use {
             while (currentTime <= settings.simulationTime) {
@@ -56,7 +56,7 @@ class Simulation(
     private suspend fun saveState() {
         output.send(
             listOf(
-                "%.8f".format(currentTime),
+                "%.4f".format(currentTime),
                 "%.8f".format(algorithm.currentPosition),
                 "%.8f".format(algorithm.currentVelocity),
             ).joinToString(separator = ",", postfix = "\n")

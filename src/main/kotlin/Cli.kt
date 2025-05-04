@@ -6,6 +6,8 @@ import com.github.ajalt.clikt.parameters.types.double
 import com.github.ajalt.clikt.parameters.types.long
 import com.github.ajalt.clikt.parameters.types.path
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -69,12 +71,15 @@ class Cli : CliktCommand() {
         canBeFile = false, canBeDir = true, mustExist = true, mustBeReadable = true, mustBeWritable = true
     ).required().help("Path to the output directory.")
 
-    override fun run() {
-        val calculatedInitialVelocity = if (initialVelocity != null) {
+    val calculatedInitialVelocity: BigDecimal by lazy {
+        if (initialVelocity != null) {
             BigDecimal.valueOf(initialVelocity!!)
         } else {
             BigDecimal.valueOf(-amplitude * gamma / (2 * mass))
         }
+    }
+
+    override fun run() {
 
         logger.info { "Starting simulation with the following parameters:" }
         logger.info { "Particle mass: $mass [kg]" }
@@ -85,19 +90,69 @@ class Cli : CliktCommand() {
         logger.info { "Initial velocity: $calculatedInitialVelocity [m/s]" }
         logger.info { "Seed: $seed" }
 
-        val fileName = buildString {
-            append("mass=$mass")
+
+        val coroutineScope = CoroutineScope(Dispatchers.Default)
+
+        val simulationJobs = mutableListOf<SimulationJob>()
+        runBlocking {
+            val euler = initializeEuler(coroutineScope)
+            simulationJobs.add(euler)
+
+            val verlet = initializeVerlet(coroutineScope)
+            simulationJobs.add(verlet)
+
+            simulationJobs.forEach { it.simulationJob.join() }
+            logger.info { "All simulations finished. Waiting for writer to finish." }
+
+            simulationJobs.forEach { it.writer.requestStop() }
+            simulationJobs.forEach { it.writerJob.join() }
+            simulationJobs.forEach { it.output.close() }
+
+            logger.info { "Simulations completed." }
+            logger.info { "Outputs saved to:" }
+            simulationJobs.forEach { logger.info("\t${it.settings.outputFile}") }
+        }
+    }
+
+    private fun initializeVerlet(scope: CoroutineScope): SimulationJob {
+        val settings = buildSettings(Verlet.PRETTY_NAME)
+        return initializeAlgorithm(
+            settings = settings,
+            algorithm = Verlet(
+                settings, Simulation.calculateAcceleration(settings, settings.r0, settings.v0)
+            ),
+            scope = scope,
+        )
+    }
+
+    private fun initializeEuler(scope: CoroutineScope): SimulationJob {
+        val settings = buildSettings(Euler.PRETTY_NAME)
+        return initializeAlgorithm(
+            settings = settings,
+            algorithm = Euler(settings = settings, deltaT = settings.deltaT),
+            scope = scope,
+        )
+    }
+
+
+    private fun buildFileName(algorithmName: String): String =
+        buildString {
+            append(algorithmName)
+            append("_dT=$deltaT")
+            append("_mass=$mass")
             append("_k=$springConstant")
             append("_y=$gamma")
             append("_t=$finalTime")
-            append("_v0=$calculatedInitialVelocity")
             append("_r0=$initialPosition")
+            append("_v0=$calculatedInitialVelocity")
+            append("_A=$amplitude")
             append("_seed=$seed")
         }.replace(".", "_").replace("=", "-") + ".csv"
 
+    private fun buildSettings(algorithmName: String): Settings {
+        val fileName = buildFileName(algorithmName)
         val outputCsv = outputDirectory.resolve(fileName).toFile()
-
-        val settings = Settings(
+        return Settings(
             outputFile = outputCsv,
             random = Random(seed),
             deltaT = BigDecimal.valueOf(deltaT),
@@ -110,36 +165,27 @@ class Cli : CliktCommand() {
             amplitude = amplitude,
             seed = seed,
         )
-
-        runBlocking {
-            // Verlet
-            val verlet = initializeVerlet(settings)
-
-            val verletWriterJob = launch { verlet.writer.start() }
-            val verletSimulationJob = launch { verlet.simulation.simulate() }
-
-            verletSimulationJob.join()
-            logger.info { "Simulation finished. Waiting for writer to finish." }
-
-            verlet.writer.requestStop()
-            verletWriterJob.join()
-            verlet.output.close()
-
-            logger.info { "Simulation completed. Output saved to $outputCsv" }
-        }
     }
 
-    private fun initializeVerlet(settings: Settings): SimulationJob {
-        val algorithm = Verlet(settings, Simulation.calculateAcceleration(settings, settings.r0, settings.v0))
+    private fun initializeAlgorithm(
+        settings: Settings,
+        algorithm: Algorithm,
+        scope: CoroutineScope
+    ): SimulationJob {
         val output = Channel<String>(capacity = Channel.UNLIMITED)
         val writer = OutputWriter(settings = settings, channel = output)
         val simulation = Simulation(settings, output = output, algorithm = algorithm)
+
+        val writerJob = scope.launch { writer.start() }
+        val simulationJob = scope.launch { simulation.simulate() }
 
         return SimulationJob(
             algorithm = algorithm,
             output = output,
             writer = writer,
+            writerJob = writerJob,
             simulation = simulation,
+            simulationJob = simulationJob,
             settings = settings
         )
     }

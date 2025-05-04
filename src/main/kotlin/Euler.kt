@@ -25,4 +25,8 @@ class Euler(settings: Settings, val deltaT: BigDecimal) : Algorithm {
 
     private fun calculateNextPosition(acceleration: BigDecimal, nextVelocity: BigDecimal): BigDecimal =
         currentPosition + deltaT * nextVelocity + deltaTSquared * acceleration / BigDecimal.TWO
+
+    companion object {
+        const val PRETTY_NAME = "Euler"
+    }
 }
