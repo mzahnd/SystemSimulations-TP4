@@ -104,6 +104,9 @@ class Cli : CliktCommand() {
             val beeman = initializeBeeman(coroutineScope)
             simulationJobs.add(beeman)
 
+            val gear = initializeGearPredictorCorrector(coroutineScope)
+            simulationJobs.add(gear)
+
             simulationJobs.forEach { it.simulationJob.join() }
             logger.info { "All simulations finished. Waiting for writer to finish." }
 
@@ -113,8 +116,17 @@ class Cli : CliktCommand() {
 
             logger.info { "Simulations completed." }
             logger.info { "Outputs saved to:" }
-            simulationJobs.forEach { logger.info("\t${it.settings.outputFile}") }
+            simulationJobs.forEach { logger.info { "\t${it.settings.outputFile}" } }
         }
+    }
+
+    private fun initializeGearPredictorCorrector(scope: CoroutineScope): SimulationJob {
+        val settings = buildSettings(GearPredictorCorrector.PRETTY_NAME)
+        return initializeAlgorithm(
+            settings = settings,
+            algorithm = GearPredictorCorrector(settings, Simulation::calculateAcceleration),
+            scope = scope,
+        )
     }
 
     private fun initializeBeeman(scope: CoroutineScope): SimulationJob {
@@ -158,7 +170,10 @@ class Cli : CliktCommand() {
             append("_v0=$calculatedInitialVelocity")
             append("_A=$amplitude")
             append("_seed=$seed")
-        }.replace(".", "_").replace("=", "-") + ".csv"
+        }.replace(".", "_")
+            .replace("=", "-")
+            .replace(" ", "-")
+            .plus(".csv")
 
     private fun buildSettings(algorithmName: String): Settings {
         val fileName = buildFileName(algorithmName)

@@ -13,6 +13,8 @@ class Verlet(settings: Settings, acceleration: (settings: Settings, currentPosit
     var _currentVelocity: BigDecimal
     var _currentPosition: BigDecimal
 
+    var _currentAcceleration: BigDecimal
+
     val deltaTSquared = settings.deltaT * settings.deltaT
     val twiceDeltaT = BigDecimal.TWO * settings.deltaT
 
@@ -20,6 +22,8 @@ class Verlet(settings: Settings, acceleration: (settings: Settings, currentPosit
         get() = _currentVelocity
     override val currentPosition: BigDecimal
         get() = _currentPosition
+    override val currentAcceleration: BigDecimal
+        get() = _currentAcceleration
 
     init {
         val initialAcceleration = acceleration(settings, settings.r0, settings.v0)
@@ -30,6 +34,7 @@ class Verlet(settings: Settings, acceleration: (settings: Settings, currentPosit
         _currentPosition = settings.r0
         _nextPosition = this.calculateNextPosition(initialAcceleration)
         _currentVelocity = settings.v0
+        _currentAcceleration = euler.currentAcceleration
     }
 
     override fun advanceDeltaT(acceleration: BigDecimal) {
@@ -37,6 +42,7 @@ class Verlet(settings: Settings, acceleration: (settings: Settings, currentPosit
         _currentPosition = _nextPosition
         _nextPosition = calculateNextPosition(acceleration)
         _currentVelocity = calculateCurrentVelocity()
+        _currentAcceleration = acceleration
     }
 
     // r(t + dT)

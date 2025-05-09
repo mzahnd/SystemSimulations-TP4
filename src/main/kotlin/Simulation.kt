@@ -38,7 +38,7 @@ class Simulation(
         )
 
         // Header
-        output.send("time,r,v\n")
+        output.send("time,r,v,a\n")
 
         createLocalMathContext(16).use {
             while (currentTime <= settings.simulationTime) {
@@ -59,6 +59,7 @@ class Simulation(
                 "%.4f".format(currentTime),
                 "%.8f".format(algorithm.currentPosition),
                 "%.8f".format(algorithm.currentVelocity),
+                "%.8f".format(algorithm.currentAcceleration),
             ).joinToString(separator = ",", postfix = "\n")
         )
     }

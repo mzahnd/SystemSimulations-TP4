@@ -36,6 +36,8 @@ class Beeman(val settings: Settings, acceleration: (settings: Settings, currentP
         get() = _currentVelocity
     override val currentPosition: BigDecimal
         get() = _currentPosition
+    override val currentAcceleration: BigDecimal
+        get() = _currentAcceleration
 
     init {
         val euler = Euler(settings, -1 * settings.deltaT)

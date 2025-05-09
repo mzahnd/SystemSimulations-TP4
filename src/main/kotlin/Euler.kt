@@ -14,6 +14,8 @@ class Euler(settings: Settings, val deltaT: BigDecimal) : Algorithm {
         get() = _currentVelocity
     override val currentPosition: BigDecimal
         get() = _currentPosition
+    override val currentAcceleration: BigDecimal
+        get() = _currentAcceleration
 
     override fun advanceDeltaT(acceleration: BigDecimal) {
         val nextVelocity = calculateNextVelocity(acceleration)
