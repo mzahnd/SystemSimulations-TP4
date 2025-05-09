@@ -126,28 +126,72 @@ def calculate_oscilator(simulation_output: Output):
     ]
 
 
-def plot_verlet(
-    simulation_output: Output,
-    output_dir: str,
-):
-    df_plot = pd.DataFrame(simulation_output.values)
+def plot_algorithms(outputs: dict[str, Output], output_dir: str, zoom: bool = False):
+    # df_plot = pd.DataFrame(simulation_output.values)
 
-    oscilator = calculate_oscilator(simulation_output)
-    df_plot_oscilator = pd.DataFrame(oscilator)
-    print(df_plot_oscilator)
+    # oscilator = calculate_oscilator(simulation_output)
+    # df_plot_oscilator = pd.DataFrame(oscilator)
+    # print(df_plot_oscilator)
+
+    # plt.figure(figsize=FIGSIZE)
+
+    # ax = sns.lineplot(data=df_plot, x="t", y="r", markers=True, label="Estimado")
+    # sns.lineplot(
+    #     data=df_plot_oscilator, x="t", y="r", ax=ax, label="Solución Analítica"
+    # )
+
+    # plt.xlabel("Tiempo (s)")
+    # plt.ylabel("Posición (m)")
+    # plt.grid(True)
+    # # plt.show()
+    # plt.savefig(f"./{output_dir}/verlet.png")
+    # plt.clf()
+    # plt.close()
 
     plt.figure(figsize=FIGSIZE)
 
-    ax = sns.lineplot(data=df_plot, x="t", y="r", markers=True, label="Estimado")
+    for label, out in outputs.items():
+        df = pd.DataFrame(out.values)
+        sns.lineplot(data=df, x="t", y="r", label=label)
+
+    # analytic curve – extracted from the first dataset (all share params)
+    analytic_vals = calculate_oscilator(next(iter(outputs.values())))
+    df_analytic = pd.DataFrame(analytic_vals)
     sns.lineplot(
-        data=df_plot_oscilator, x="t", y="r", ax=ax, label="Solución Analítica"
+        data=df_analytic,
+        x="t",
+        y="r",
+        label="Solución Analítica",
+        color="black",
+        linestyle="--",
     )
 
     plt.xlabel("Tiempo (s)")
     plt.ylabel("Posición (m)")
     plt.grid(True)
-    # plt.show()
-    plt.savefig(f"./{output_dir}/verlet.png")
+
+    if zoom:
+        # Zoom into the last 10 % of the simulated time to highlight divergence
+        t_min, t_max = df_analytic["t"].min(), df_analytic["t"].max()
+        span = t_max - t_min
+        left, right = t_max - 0.05 * span, t_max
+        plt.xlim(left, right)
+
+        mask = (df_analytic["t"] >= left) & (df_analytic["t"] <= right)
+        y_min, y_max = (
+            df_analytic.loc[mask, "r"].min() - 0.01,
+            df_analytic.loc[mask, "r"].max() + 0.01,
+        )
+        padding = 0.05 * abs(y_max - y_min)
+        plt.ylim(y_min - padding, y_max + padding)
+
+        filename = os.path.join(output_dir, "algorithms_zoom.png")
+    else:
+        filename = os.path.join(output_dir, "algorithms.png")
+
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(filename, dpi=DPI)
     plt.clf()
     plt.close()
 
@@ -180,24 +224,55 @@ def read_csv(filepath: str):
     return Output(params=config, values=values)
 
 
-def main(output_file: str):
+def main(
+    euler_path: str | None,
+    verlet_path: str | None,
+    beeman_path: str | None,
+    gpc_path: str | None,
+):
     input_dir = "./output"
     output_base_dir = "./graphics"
     os.makedirs(output_base_dir, exist_ok=True)
 
-    simulation_output = read_csv(f"{input_dir}/{output_file}")
+    outputs: dict[str, Output] = {}
+    if euler_path:
+        outputs["Euler"] = read_csv(
+            euler_path
+            if os.path.isabs(euler_path)
+            else os.path.join(input_dir, euler_path)
+        )
+    if verlet_path:
+        outputs["Verlet"] = read_csv(
+            verlet_path
+            if os.path.isabs(verlet_path)
+            else os.path.join(input_dir, verlet_path)
+        )
+    if beeman_path:
+        outputs["Beeman"] = read_csv(
+            beeman_path
+            if os.path.isabs(beeman_path)
+            else os.path.join(input_dir, beeman_path)
+        )
+    if gpc_path:
+        outputs["GPC"] = read_csv(
+            gpc_path if os.path.isabs(gpc_path) else os.path.join(input_dir, gpc_path)
+        )
 
-    plot_verlet(simulation_output, output_base_dir)
+    if not outputs:
+        raise ValueError("Debes proporcionar al menos un archivo de algoritmo.")
+
+    plot_algorithms(outputs, output_base_dir, zoom=False)
+    plot_algorithms(outputs, output_base_dir, zoom=True)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Parse Kotlin output file and generate animations and plots."
     )
-    parser.add_argument(
-        "-f", "--output_file", type=str, required=True, help="Output file to animate"
-    )
+    parser.add_argument("--euler", type=str, help="CSV de la integración de Euler")
+    parser.add_argument("--verlet", type=str, help="CSV de la integración de Verlet")
+    parser.add_argument("--beeman", type=str, help="CSV de la integración de Beeman")
+    parser.add_argument("--gpc", type=str, help="CSV de Gear Predictor-Corrector")
 
     args = parser.parse_args()
-
-    main(output_file=args.output_file)
+    main(args.euler, args.verlet, args.beeman, args.gpc)
