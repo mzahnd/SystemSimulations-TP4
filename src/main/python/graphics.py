@@ -223,6 +223,17 @@ def read_csv(filepath: str):
 
     return Output(params=config, values=values)
 
+def print_mse(outputs: dict[str, Output]):
+    analytic_vals = calculate_oscilator(next(iter(outputs.values())))
+    df_analytic = pd.DataFrame(analytic_vals)
+    df_analytic.set_index("t", inplace=True)
+    print("MSE VALUES:")
+    for label, output in outputs.items():
+        df = pd.DataFrame(output.values)
+        df.set_index("t", inplace=True)
+        df["r_squared"] = (df["r"] - df_analytic["r"]) ** 2
+        mse = df["r_squared"].mean()
+        print(f"{label}: {mse}")
 
 def main(
     euler_path: str | None,
@@ -263,6 +274,7 @@ def main(
 
     plot_algorithms(outputs, output_base_dir, zoom=False)
     plot_algorithms(outputs, output_base_dir, zoom=True)
+    print_mse(outputs)
 
 
 if __name__ == "__main__":
