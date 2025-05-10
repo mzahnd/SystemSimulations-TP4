@@ -27,7 +27,7 @@ class Verlet(settings: Settings, acceleration: (settings: Settings, currentPosit
 
     init {
         val initialAcceleration = acceleration(settings, settings.r0, settings.v0)
-        val euler = Euler(settings, -1 * settings.deltaT)
+        val euler = Euler(settings, acceleration, -1 * settings.deltaT)
         euler.advanceDeltaT(initialAcceleration)
 
         _previousPosition = euler.currentPosition // This is the "-dT" position

@@ -153,7 +153,11 @@ class Cli : CliktCommand() {
         val settings = buildSettings(Euler.PRETTY_NAME)
         return initializeAlgorithm(
             settings = settings,
-            algorithm = Euler(settings = settings, deltaT = settings.deltaT),
+            algorithm = Euler(
+                settings = settings,
+                deltaT = settings.deltaT,
+                Simulation::calculateAcceleration
+            ),
             scope = scope,
         )
     }

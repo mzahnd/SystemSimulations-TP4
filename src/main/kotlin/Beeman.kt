@@ -6,7 +6,10 @@ import ch.obermuhlner.math.big.kotlin.bigdecimal.plus
 import ch.obermuhlner.math.big.kotlin.bigdecimal.times
 import java.math.BigDecimal
 
-class Beeman(val settings: Settings, acceleration: (settings: Settings, currentPosition: BigDecimal, currentVelocity: BigDecimal) -> BigDecimal) : Algorithm {
+class Beeman(
+    val settings: Settings,
+    acceleration: (settings: Settings, currentPosition: BigDecimal, currentVelocity: BigDecimal) -> BigDecimal
+) : Algorithm {
     var _previousPosition: BigDecimal
     var _currentPosition: BigDecimal
     var _nextPosition: BigDecimal
@@ -40,7 +43,7 @@ class Beeman(val settings: Settings, acceleration: (settings: Settings, currentP
         get() = _currentAcceleration
 
     init {
-        val euler = Euler(settings, -1 * settings.deltaT)
+        val euler = Euler(settings, acceleration, -1 * settings.deltaT)
         _currentAcceleration = acceleration(settings, settings.r0, settings.v0)
         euler.advanceDeltaT(_currentAcceleration)
 
@@ -60,10 +63,10 @@ class Beeman(val settings: Settings, acceleration: (settings: Settings, currentP
             dT = settings.deltaT
         )
         _nextVelocity = this.predictNextVelocity(
-            v=_currentVelocity,
-            a=_currentAcceleration,
-            aMinusDt=_previousAcceleration,
-            dT=settings.deltaT
+            v = _currentVelocity,
+            a = _currentAcceleration,
+            aMinusDt = _previousAcceleration,
+            dT = settings.deltaT
         )
     }
 
@@ -84,10 +87,10 @@ class Beeman(val settings: Settings, acceleration: (settings: Settings, currentP
         _currentAcceleration = acceleration
 
         _nextVelocity = predictNextVelocity(
-            v=_currentVelocity,
-            a=_currentAcceleration,
-            aMinusDt=_previousAcceleration,
-            dT=settings.deltaT
+            v = _currentVelocity,
+            a = _currentAcceleration,
+            aMinusDt = _previousAcceleration,
+            dT = settings.deltaT
         )
 
         _previousPosition = _currentPosition
