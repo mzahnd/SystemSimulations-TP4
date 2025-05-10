@@ -7,5 +7,5 @@ interface Algorithm {
     val currentPosition: BigDecimal
     val currentAcceleration: BigDecimal
 
-    fun advanceDeltaT(acceleration: BigDecimal)
+    fun advanceDeltaT()
 }

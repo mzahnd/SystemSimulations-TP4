@@ -3,32 +3,32 @@ package ar.edu.itba.ss
 import ch.obermuhlner.math.big.kotlin.bigdecimal.times
 import java.math.BigDecimal
 
-class Euler(settings: Settings, val deltaT: BigDecimal) : Algorithm {
-    var _currentVelocity: BigDecimal = settings.v0
-    var _currentPosition: BigDecimal = settings.r0
-    var _currentAcceleration: BigDecimal = BigDecimal.ZERO
+class Euler(
+    val settings: Settings,
+    val acceleration: (settings: Settings, currentPosition: BigDecimal, currentVelocity: BigDecimal) -> BigDecimal,
+    deltaT: BigDecimal
+) : Algorithm {
+    private val dT = deltaT
 
-    val deltaTSquared = settings.deltaT * settings.deltaT
+    override var currentVelocity: BigDecimal = settings.v0
+        private set
+    override var currentPosition: BigDecimal = settings.r0
+        private set
+    override var currentAcceleration: BigDecimal = acceleration(settings, currentPosition, currentVelocity)
+        private set
 
-    override val currentVelocity: BigDecimal
-        get() = _currentVelocity
-    override val currentPosition: BigDecimal
-        get() = _currentPosition
-    override val currentAcceleration: BigDecimal
-        get() = _currentAcceleration
+    override fun advanceDeltaT() {
+        val r0 = currentPosition
+        val v0 = currentVelocity
+        val a0 = currentAcceleration
 
-    override fun advanceDeltaT(acceleration: BigDecimal) {
-        val nextVelocity = calculateNextVelocity(acceleration)
-        _currentVelocity = nextVelocity
-        _currentPosition = calculateNextPosition(acceleration, nextVelocity)
-        _currentAcceleration = acceleration
+        val v1 = v0 + dT * a0
+        val r1 = r0 + dT * v1
+
+        currentVelocity = v1
+        currentPosition = r1
+        currentAcceleration = acceleration(settings, r1, v1)
     }
-
-    private fun calculateNextVelocity(acceleration: BigDecimal): BigDecimal =
-        currentVelocity + deltaT * acceleration
-
-    private fun calculateNextPosition(acceleration: BigDecimal, nextVelocity: BigDecimal): BigDecimal =
-        currentPosition + deltaT * nextVelocity + deltaTSquared * acceleration / BigDecimal.TWO
 
     companion object {
         const val PRETTY_NAME = "Euler"
