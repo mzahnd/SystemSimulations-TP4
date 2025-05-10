@@ -6,52 +6,62 @@ import ch.obermuhlner.math.big.kotlin.bigdecimal.plus
 import ch.obermuhlner.math.big.kotlin.bigdecimal.times
 import java.math.BigDecimal
 
-class Verlet(settings: Settings, acceleration: (settings: Settings, currentPosition: BigDecimal, currentVelocity: BigDecimal) -> BigDecimal) : Algorithm {
-    var _previousPosition: BigDecimal
-    var _nextPosition: BigDecimal
+class Verlet(
+    val settings: Settings,
+    val acceleration: (settings: Settings, currentPosition: BigDecimal, currentVelocity: BigDecimal) -> BigDecimal
+) : Algorithm {
+    var previousPosition: BigDecimal
 
-    var _currentVelocity: BigDecimal
-    var _currentPosition: BigDecimal
+    val dT = settings.deltaT
+    val dT2 = dT * dT
+    val twiceDeltaT = BigDecimal.TWO * dT
 
-    var _currentAcceleration: BigDecimal
-
-    val deltaTSquared = settings.deltaT * settings.deltaT
-    val twiceDeltaT = BigDecimal.TWO * settings.deltaT
-
-    override val currentVelocity: BigDecimal
-        get() = _currentVelocity
-    override val currentPosition: BigDecimal
-        get() = _currentPosition
-    override val currentAcceleration: BigDecimal
-        get() = _currentAcceleration
+    override var currentVelocity: BigDecimal
+        private set
+    override var currentPosition: BigDecimal
+        private set
+    override var currentAcceleration: BigDecimal
+        private set
 
     init {
-        val initialAcceleration = acceleration(settings, settings.r0, settings.v0)
-        val euler = Euler(settings, acceleration, -1 * settings.deltaT)
-        euler.advanceDeltaT(initialAcceleration)
+        val ri = settings.r0
+        val vi = settings.v0
+        val a0 = acceleration(settings, ri, vi)
 
-        _previousPosition = euler.currentPosition // This is the "-dT" position
-        _currentPosition = settings.r0
-        _nextPosition = this.calculateNextPosition(initialAcceleration)
-        _currentVelocity = settings.v0
-        _currentAcceleration = euler.currentAcceleration
+        val euler = Euler(settings, acceleration, -1 * dT)
+        euler.advanceDeltaT(a0)
+
+        val riTMinusDt = euler.currentPosition
+
+        previousPosition = riTMinusDt
+        currentPosition = ri
+        currentVelocity = vi
+        currentAcceleration = a0
     }
 
-    override fun advanceDeltaT(acceleration: BigDecimal) {
-        _previousPosition = _currentPosition
-        _currentPosition = _nextPosition
-        _nextPosition = calculateNextPosition(acceleration)
-        _currentVelocity = calculateCurrentVelocity()
-        _currentAcceleration = acceleration
+    override fun advanceDeltaT(accel: BigDecimal) {
+        val riTMinusDt = previousPosition
+        val ri = currentPosition
+
+        val vi = currentVelocity
+        val a0 = acceleration(settings, ri, vi)
+
+        val riTPlusDt = calculateNextPosition(ri, riTMinusDt, a0)
+        val viTPlusDt = calculateCurrentVelocity(riTMinusDt, riTPlusDt)
+
+        previousPosition = ri
+        currentPosition = riTPlusDt
+        currentVelocity = viTPlusDt
+        currentAcceleration = a0
     }
 
     // r(t + dT)
-    private fun calculateNextPosition(acceleration: BigDecimal) =
-        BigDecimal.TWO * _currentPosition - _previousPosition + deltaTSquared * acceleration
+    private fun calculateNextPosition(ri: BigDecimal, riTMinusDt: BigDecimal, acceleration: BigDecimal) =
+        BigDecimal.TWO * ri - riTMinusDt + dT2 * acceleration
 
     // v(t)
-    private fun calculateCurrentVelocity(): BigDecimal =
-        (_nextPosition - _previousPosition) / twiceDeltaT
+    private fun calculateCurrentVelocity(riTMinusDt: BigDecimal, riTPlusDt: BigDecimal): BigDecimal =
+        (riTPlusDt - riTMinusDt) / twiceDeltaT
 
     companion object {
         const val PRETTY_NAME = "Verlet"

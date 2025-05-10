@@ -42,11 +42,9 @@ class Simulation(
 
         createLocalMathContext(16).use {
             while (currentTime <= settings.simulationTime) {
-                val acceleration =
-                    calculateAcceleration(settings, algorithm.currentPosition, algorithm.currentVelocity)
-                algorithm.advanceDeltaT(acceleration)
+                algorithm.advanceDeltaT(BigDecimal.ZERO) // parameter always ignored
                 currentTime += settings.deltaT
-                saveState() // Also saves t = 0
+                saveState()
             }
         }
 
