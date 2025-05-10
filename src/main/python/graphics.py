@@ -172,15 +172,15 @@ def plot_algorithms(outputs: dict[str, Output], output_dir: str, zoom: bool = Fa
 
     if zoom:
         # Zoom into the last 10 % of the simulated time to highlight divergence
-        t_min, t_max = df_analytic["t"].min(), df_analytic["t"].max()
+        t_min, t_max = df_analytic["t"].min() + 1, df_analytic["t"].max() - 1
         span = t_max - t_min
-        left, right = t_max - 0.05 * span, t_max
+        left, right = t_max - 0.0000001 * span, t_max
         plt.xlim(left, right)
 
         mask = (df_analytic["t"] >= left) & (df_analytic["t"] <= right)
         y_min, y_max = (
-            df_analytic.loc[mask, "r"].min() - 0.01,
-            df_analytic.loc[mask, "r"].max() + 0.01,
+            df_analytic.loc[mask, "r"].min() - 0.005,
+            df_analytic.loc[mask, "r"].max() + 0.005,
         )
         padding = 0.05 * abs(y_max - y_min)
         plt.ylim(y_min - padding, y_max + padding)
@@ -223,6 +223,7 @@ def read_csv(filepath: str):
 
     return Output(params=config, values=values)
 
+
 def print_mse(outputs: dict[str, Output]):
     analytic_vals = calculate_oscilator(next(iter(outputs.values())))
     df_analytic = pd.DataFrame(analytic_vals)
@@ -234,6 +235,7 @@ def print_mse(outputs: dict[str, Output]):
         df["r_squared"] = (df["r"] - df_analytic["r"]) ** 2
         mse = df["r_squared"].mean()
         print(f"{label}: {mse}")
+
 
 def main(
     euler_path: str | None,
