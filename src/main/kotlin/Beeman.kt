@@ -8,20 +8,18 @@ import java.math.BigDecimal
 
 class Beeman(
     val settings: Settings,
-    acceleration: (settings: Settings, currentPosition: BigDecimal, currentVelocity: BigDecimal) -> BigDecimal
+    val acceleration: (settings: Settings, currentPosition: BigDecimal, currentVelocity: BigDecimal) -> BigDecimal
 ) : Algorithm {
     var _previousPosition: BigDecimal
-    var _currentPosition: BigDecimal
     var _nextPosition: BigDecimal
 
     var _previousVelocity: BigDecimal
-    var _currentVelocity: BigDecimal
     var _nextVelocity: BigDecimal
 
     var _previousAcceleration: BigDecimal
-    var _currentAcceleration: BigDecimal
 
-    val deltaTSquared = settings.deltaT * settings.deltaT
+    val dT = settings.deltaT
+    val dT2 = dT * dT
 
     // x(t + dT)
     val twoOverThree = BigDecimal.TWO / BigDecimal.valueOf(3)
@@ -35,72 +33,79 @@ class Beeman(
     val oneOverThree = BigDecimal.ONE / BigDecimal.valueOf(3)
     val fiveOverSix = BigDecimal.valueOf(5) / BigDecimal.valueOf(6)
 
-    override val currentVelocity: BigDecimal
-        get() = _currentVelocity
-    override val currentPosition: BigDecimal
-        get() = _currentPosition
-    override val currentAcceleration: BigDecimal
-        get() = _currentAcceleration
+    override var currentVelocity: BigDecimal
+        private set
+    override var currentPosition: BigDecimal
+        private set
+    override var currentAcceleration: BigDecimal
+        private set
 
     init {
-        val euler = Euler(settings, acceleration, -1 * settings.deltaT)
-        _currentAcceleration = acceleration(settings, settings.r0, settings.v0)
-        euler.advanceDeltaT(_currentAcceleration)
+        val ri = settings.r0
+        val vi = settings.v0
+        val ai = acceleration(settings, ri, vi)
 
-        _previousPosition = euler.currentPosition // "-dT" position
-        _currentPosition = settings.r0
-        _previousVelocity = euler.currentVelocity // "-dT" velocity
-        _currentVelocity = settings.v0
+        val euler = Euler(settings, acceleration, -1 * dT)
+        euler.advanceDeltaT(ai)
 
-        _previousAcceleration = acceleration(settings, _previousPosition, _previousVelocity)
-        euler.advanceDeltaT(_previousAcceleration) // (2 * -dT)
+        val riTMinusDt = euler.currentPosition
+        val viTMinusDt = euler.currentVelocity
+        val aiMinusDt = acceleration(settings, riTMinusDt, viTMinusDt)
 
-        _nextPosition = this.calculateNextPosition(
-            x = _currentPosition,
-            v = _currentVelocity,
-            a = _currentAcceleration,
-            aMinusDt = _previousAcceleration,
-            dT = settings.deltaT
+        val riTPlusDt = calculateNextPosition(
+            x = ri,
+            v = vi,
+            a = ai,
+            aMinusDt = aiMinusDt,
         )
-        _nextVelocity = this.predictNextVelocity(
-            v = _currentVelocity,
-            a = _currentAcceleration,
-            aMinusDt = _previousAcceleration,
-            dT = settings.deltaT
+        val viTPlusDt = predictNextVelocity(
+            v = vi,
+            a = ai,
+            aMinusDt = aiMinusDt,
         )
+
+        _previousPosition = riTMinusDt
+        currentPosition = ri
+        _nextPosition = riTPlusDt
+
+        _previousVelocity = viTMinusDt
+        currentVelocity = vi
+        _nextVelocity = viTPlusDt
+
+        _previousAcceleration = aiMinusDt
+        currentAcceleration = ai
     }
 
-    override fun advanceDeltaT(acceleration: BigDecimal) {
-        _previousVelocity = _currentVelocity
-        // At this point, we are in a(t + dT) for the predicted nextVelocity
-        _nextVelocity = correctVelocity(
-            v = _currentVelocity, // v(t)
-            aPlusDt = acceleration,
-            a = _currentAcceleration,
-            aMinusDt = _previousAcceleration,
-            dT = settings.deltaT
-        )
-        _currentVelocity = _nextVelocity
-
-        // Update acceleration to predict v(t + dT)
-        _previousAcceleration = _currentAcceleration
-        _currentAcceleration = acceleration
-
-        _nextVelocity = predictNextVelocity(
-            v = _currentVelocity,
-            a = _currentAcceleration,
-            aMinusDt = _previousAcceleration,
-            dT = settings.deltaT
-        )
-
-        _previousPosition = _currentPosition
-        _currentPosition = _nextPosition
+    override fun advanceDeltaT(accel: BigDecimal) {
+        val ri = currentPosition
+        val vi = currentVelocity
+        val ai = currentAcceleration
+        val aiTMinusDt = _previousAcceleration
+        // Predict
+        val riTPlusDt = calculateNextPosition(ri, vi, ai, aiTMinusDt)
+        val viTPlusDtPredicted = predictNextVelocity(vi, ai, aiTMinusDt)
+        // Real acceleration
+        val aiTPlusDt = acceleration(settings, riTPlusDt, viTPlusDtPredicted)
+        // Correct
+        val viTPlusDt = correctVelocity(vi, aiTPlusDt, ai, aiTMinusDt)
+        // Shift to current values, and correct v
+        _previousPosition = ri
+        currentPosition = riTPlusDt
+        _previousAcceleration = ai
+        currentAcceleration = aiTPlusDt
+        _previousVelocity = vi
+        currentVelocity = viTPlusDt
+        // Predict next step
         _nextPosition = calculateNextPosition(
-            x = _currentPosition,
-            v = _currentVelocity,
-            a = _currentAcceleration,
-            aMinusDt = _previousAcceleration,
-            dT = settings.deltaT
+            currentPosition,
+            currentVelocity,
+            currentAcceleration,
+            _previousAcceleration,
+        )
+        _nextVelocity = predictNextVelocity(
+            currentVelocity,
+            currentAcceleration,
+            _previousAcceleration,
         )
     }
 
@@ -109,16 +114,14 @@ class Beeman(
         x: BigDecimal,
         v: BigDecimal,
         a: BigDecimal,
-        aMinusDt: BigDecimal,
-        dT: BigDecimal
+        aMinusDt: BigDecimal
     ) =
-        x + v * dT + twoOverThree * a * deltaTSquared - oneOverSix * aMinusDt * deltaTSquared
+        x + v * dT + twoOverThree * a * dT2 - oneOverSix * aMinusDt * dT2
 
     private fun predictNextVelocity(
         v: BigDecimal,
         a: BigDecimal,
-        aMinusDt: BigDecimal,
-        dT: BigDecimal
+        aMinusDt: BigDecimal
     ): BigDecimal =
         v + threeOverTwo * a * dT - oneOverTwo * aMinusDt * dT
 
@@ -126,8 +129,7 @@ class Beeman(
         v: BigDecimal,
         aPlusDt: BigDecimal,
         a: BigDecimal,
-        aMinusDt: BigDecimal,
-        dT: BigDecimal
+        aMinusDt: BigDecimal
     ): BigDecimal =
         v + oneOverThree * aPlusDt * dT + fiveOverSix * a * dT - oneOverSix * aMinusDt * dT
 
