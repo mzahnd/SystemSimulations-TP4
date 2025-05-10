@@ -5,8 +5,8 @@ import java.math.BigDecimal
 
 class Euler(
     val settings: Settings,
-    val acceleration: (settings: Settings, currentPosition: BigDecimal, currentVelocity: BigDecimal) -> BigDecimal
-    deltaT: BigDecimal,
+    val acceleration: (settings: Settings, currentPosition: BigDecimal, currentVelocity: BigDecimal) -> BigDecimal,
+    deltaT: BigDecimal
 ) : Algorithm {
     private val dT = deltaT
 

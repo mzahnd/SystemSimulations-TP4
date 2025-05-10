@@ -155,8 +155,8 @@ class Cli : CliktCommand() {
             settings = settings,
             algorithm = Euler(
                 settings = settings,
+                acceleration = Simulation::calculateAcceleration,
                 deltaT = settings.deltaT,
-                Simulation::calculateAcceleration
             ),
             scope = scope,
         )
