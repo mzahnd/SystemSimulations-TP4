@@ -42,7 +42,7 @@ class Simulation(
 
         createLocalMathContext(16).use {
             while (currentTime <= settings.simulationTime) {
-                algorithm.advanceDeltaT(BigDecimal.ZERO) // parameter always ignored
+                algorithm.advanceDeltaT() // parameter always ignored
                 currentTime += settings.deltaT
                 saveState()
             }

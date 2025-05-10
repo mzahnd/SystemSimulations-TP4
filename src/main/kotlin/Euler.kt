@@ -17,7 +17,7 @@ class Euler(
     override var currentAcceleration: BigDecimal = acceleration(settings, currentPosition, currentVelocity)
         private set
 
-    override fun advanceDeltaT(accel: BigDecimal) {
+    override fun advanceDeltaT() {
         val r0 = currentPosition
         val v0 = currentVelocity
         val a0 = currentAcceleration

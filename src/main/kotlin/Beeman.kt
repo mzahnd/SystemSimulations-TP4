@@ -10,13 +10,13 @@ class Beeman(
     val settings: Settings,
     val acceleration: (settings: Settings, currentPosition: BigDecimal, currentVelocity: BigDecimal) -> BigDecimal
 ) : Algorithm {
-    var _previousPosition: BigDecimal
-    var _nextPosition: BigDecimal
+    var previousPosition: BigDecimal
+    var nextPosition: BigDecimal
 
-    var _previousVelocity: BigDecimal
-    var _nextVelocity: BigDecimal
+    var previousVelocity: BigDecimal
+    var nextVelocity: BigDecimal
 
-    var _previousAcceleration: BigDecimal
+    var previousAcceleration: BigDecimal
 
     val dT = settings.deltaT
     val dT2 = dT * dT
@@ -46,7 +46,7 @@ class Beeman(
         val ai = acceleration(settings, ri, vi)
 
         val euler = Euler(settings, acceleration, -1 * dT)
-        euler.advanceDeltaT(ai)
+        euler.advanceDeltaT()
 
         val riTMinusDt = euler.currentPosition
         val viTMinusDt = euler.currentVelocity
@@ -64,23 +64,23 @@ class Beeman(
             aMinusDt = aiMinusDt,
         )
 
-        _previousPosition = riTMinusDt
+        previousPosition = riTMinusDt
         currentPosition = ri
-        _nextPosition = riTPlusDt
+        nextPosition = riTPlusDt
 
-        _previousVelocity = viTMinusDt
+        previousVelocity = viTMinusDt
         currentVelocity = vi
-        _nextVelocity = viTPlusDt
+        nextVelocity = viTPlusDt
 
-        _previousAcceleration = aiMinusDt
+        previousAcceleration = aiMinusDt
         currentAcceleration = ai
     }
 
-    override fun advanceDeltaT(accel: BigDecimal) {
+    override fun advanceDeltaT() {
         val ri = currentPosition
         val vi = currentVelocity
         val ai = currentAcceleration
-        val aiTMinusDt = _previousAcceleration
+        val aiTMinusDt = previousAcceleration
         // Predict
         val riTPlusDt = calculateNextPosition(ri, vi, ai, aiTMinusDt)
         val viTPlusDtPredicted = predictNextVelocity(vi, ai, aiTMinusDt)
@@ -89,23 +89,23 @@ class Beeman(
         // Correct
         val viTPlusDt = correctVelocity(vi, aiTPlusDt, ai, aiTMinusDt)
         // Shift to current values, and correct v
-        _previousPosition = ri
+        previousPosition = ri
         currentPosition = riTPlusDt
-        _previousAcceleration = ai
+        previousAcceleration = ai
         currentAcceleration = aiTPlusDt
-        _previousVelocity = vi
+        previousVelocity = vi
         currentVelocity = viTPlusDt
         // Predict next step
-        _nextPosition = calculateNextPosition(
+        nextPosition = calculateNextPosition(
             currentPosition,
             currentVelocity,
             currentAcceleration,
-            _previousAcceleration,
+            previousAcceleration,
         )
-        _nextVelocity = predictNextVelocity(
+        nextVelocity = predictNextVelocity(
             currentVelocity,
             currentAcceleration,
-            _previousAcceleration,
+            previousAcceleration,
         )
     }
 

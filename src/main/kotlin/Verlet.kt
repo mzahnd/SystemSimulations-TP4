@@ -29,7 +29,7 @@ class Verlet(
         val a0 = acceleration(settings, ri, vi)
 
         val euler = Euler(settings, acceleration, -1 * dT)
-        euler.advanceDeltaT(a0)
+        euler.advanceDeltaT()
 
         val riTMinusDt = euler.currentPosition
 
@@ -39,7 +39,7 @@ class Verlet(
         currentAcceleration = a0
     }
 
-    override fun advanceDeltaT(accel: BigDecimal) {
+    override fun advanceDeltaT() {
         val riTMinusDt = previousPosition
         val ri = currentPosition
 
