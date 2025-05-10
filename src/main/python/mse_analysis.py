@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter, LogLocator
 import seaborn as sns
 import numpy as np
 
@@ -81,6 +82,14 @@ class Output:
     dt: float
 
 
+def _pow10_fmt(y, _):
+    """Return labels like 10^{-8} for log-scaled axis."""
+    if y == 0:
+        return "0"
+    exp = int(np.log10(y))
+    return rf"$10^{{{exp}}}$"
+
+
 def format_power_of_10(x):
     if x == 0:
         return "0"
@@ -120,14 +129,16 @@ def read_csv(filepath: str) -> Output:
     df = df.sort_values("time")
 
     # Calcular dt como la diferencia promedio entre tiempos
-    times = df['time'].values
+    times = df["time"].values
     if len(times) > 1:
         dt = round(np.mean(np.diff(times)), 8)
     else:
         dt = 0.0
 
-    values = [Instant(t=row.time, r=row.r, v=row.v, a=row.a)
-              for row in df.itertuples(index=False)]
+    values = [
+        Instant(t=row.time, r=row.r, v=row.v, a=row.a)
+        for row in df.itertuples(index=False)
+    ]
 
     return Output(params=config, values=values, dt=dt)
 
@@ -136,13 +147,19 @@ def calculate_oscilator(simulation_output: Output):
     params = simulation_output.params
     gamma_over_2m = params.gamma / (2 * params.mass)
     k_over_m = params.k / params.mass
-    gamma_square_over_4m2 = (params.gamma * params.gamma) / (4 * params.mass * params.mass)
+    gamma_square_over_4m2 = (params.gamma * params.gamma) / (
+        4 * params.mass * params.mass
+    )
     cos_constant = np.sqrt(k_over_m - gamma_square_over_4m2)
 
     def r_t(t: float):
-        return params.amplitude * np.exp(t * gamma_over_2m * -1) * np.cos(t * cos_constant)
+        return (
+            params.amplitude * np.exp(t * gamma_over_2m * -1) * np.cos(t * cos_constant)
+        )
 
-    return [Instant(t=out.t, r=r_t(out.t), v=0.0, a=0.0) for out in simulation_output.values]
+    return [
+        Instant(t=out.t, r=r_t(out.t), v=0.0, a=0.0) for out in simulation_output.values
+    ]
 
 
 def calculate_mse(output: Output) -> float:
@@ -150,42 +167,64 @@ def calculate_mse(output: Output) -> float:
     df_analytic = pd.DataFrame(analytic_vals)
     df = pd.DataFrame(output.values)
 
-    df_merged = pd.merge(df, df_analytic, on='t', suffixes=('', '_analytic'))
-    mse = np.mean((df_merged['r'] - df_merged['r_analytic']) ** 2)
+    df_merged = pd.merge(df, df_analytic, on="t", suffixes=("", "_analytic"))
+    mse = np.mean((df_merged["r"] - df_merged["r_analytic"]) ** 2)
     return mse
 
 
 def plot_mse_by_dt(outputs_by_method: Dict[str, List[Output]], output_dir: str):
+    Y_MIN_EXP = -26  # lower exponent     ⟵ change here if needed
+    Y_MAX_EXP = -5  # upper exponent     ⟵ change here if needed
+    Y_MIN = 10**Y_MIN_EXP
+    Y_MAX = 10**Y_MAX_EXP
     plt.figure(figsize=FIGSIZE)
 
+    # ── reshape data ────────────────────────────────────────────────
     mse_data = []
     for method, outputs in outputs_by_method.items():
         for output in outputs:
-            mse = calculate_mse(output)
-            mse_data.append({
-                'Method': method,
-                'dt': output.dt,
-                'MSE': mse
-            })
+            mse_data.append(
+                {
+                    "Method": method,
+                    "dt": output.dt,
+                    "MSE": calculate_mse(output),
+                }
+            )
 
-    df = pd.DataFrame(mse_data)
-    df = df.sort_values('dt')
+    df = pd.DataFrame(mse_data).sort_values("dt")
     print(df)
 
-    sns.lineplot(data=df, x='dt', y='MSE', hue='Method', marker='o',
-                 style='Method', markersize=8, linewidth=2)
+    # ── main line plot ──────────────────────────────────────────────
+    ax = sns.lineplot(
+        data=df,
+        x="dt",
+        y="MSE",
+        hue="Method",
+        marker="o",
+        style="Method",
+        markersize=8,
+        linewidth=2,
+    )
 
-    plt.xlabel('Paso de tiempo (dt)')
-    plt.ylabel('Error Cuadrático Medio (MSE)')
-    plt.grid(True)
+    # ── Y axis: logarithmic and nicely formatted ───────────────────
+    ax.set_yscale("log")
+    ax.set_ylim(Y_MIN, Y_MAX)
+    ax.yaxis.set_major_locator(LogLocator(base=10))
+    ax.yaxis.set_major_formatter(FuncFormatter(_pow10_fmt))
 
-    unique_dts = sorted(df['dt'].unique())
+    # ── X axis: show every dt value ────────────────────────────────
+    unique_dts = sorted(df["dt"].unique())
     plt.xticks(unique_dts)
 
-    plt.legend(title='Método')
+    # ── labels, grid, legend ───────────────────────────────────────
+    plt.xlabel("Paso de tiempo (dt)")
+    plt.ylabel("Error Cuadrático Medio (MSE)")
+    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.6)
+    plt.legend(title="Método")
     plt.tight_layout()
 
-    output_path = os.path.join(output_dir, 'mse_vs_dt.png')
+    # ── save figure ────────────────────────────────────────────────
+    output_path = os.path.join(output_dir, "mse_vs_dt.png")
     plt.savefig(output_path, dpi=DPI)
     plt.clf()
     plt.close()
@@ -193,12 +232,53 @@ def plot_mse_by_dt(outputs_by_method: Dict[str, List[Output]], output_dir: str):
     print(f"Gráfico de MSE vs dt guardado en: {output_path}")
 
 
+def plot_mse_by_dt_2(outputs_by_method: Dict[str, List[Output]], output_dir: str):
+    plt.figure(figsize=FIGSIZE)
+
+    mse_data = []
+    for method, outputs in outputs_by_method.items():
+        for output in outputs:
+            mse = calculate_mse(output)
+            mse_data.append({"Method": method, "dt": output.dt, "MSE": mse})
+
+    df = pd.DataFrame(mse_data)
+    df = df.sort_values("dt")
+    print(df)
+
+    sns.lineplot(
+        data=df,
+        x="dt",
+        y="MSE",
+        hue="Method",
+        marker="o",
+        style="Method",
+        markersize=8,
+        linewidth=2,
+    )
+
+    plt.xlabel("Paso de tiempo (dt)")
+    plt.ylabel("Error Cuadrático Medio (MSE)")
+    plt.grid(True)
+
+    unique_dts = sorted(df["dt"].unique())
+    plt.xticks(unique_dts)
+
+    plt.legend(title="Método")
+    plt.tight_layout()
+
+    output_path = os.path.join(output_dir, "mse_vs_dt.png")
+    plt.savefig(output_path, dpi=DPI)
+    plt.clf()
+    plt.close()
+
+    print(f"Gráfico de MSE vs dt guardado en: {output_path}")
+
 
 def main(
-        euler_paths: Optional[List[str]],
-        verlet_paths: Optional[List[str]],
-        beeman_paths: Optional[List[str]],
-        gpc_paths: Optional[List[str]],
+    euler_paths: Optional[List[str]],
+    verlet_paths: Optional[List[str]],
+    beeman_paths: Optional[List[str]],
+    gpc_paths: Optional[List[str]],
 ):
     input_dir = "./output"
     output_base_dir = "./graphics"
@@ -228,10 +308,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Comparar múltiples simulaciones y graficar MSE en función de dt."
     )
-    parser.add_argument("--euler", type=str, nargs='+', help="CSVs de Euler")
-    parser.add_argument("--verlet", type=str, nargs='+', help="CSVs de Verlet")
-    parser.add_argument("--beeman", type=str, nargs='+', help="CSVs de Beeman")
-    parser.add_argument("--gpc", type=str, nargs='+', help="CSVs de Gear Predictor-Corrector")
+    parser.add_argument("--euler", type=str, nargs="+", help="CSVs de Euler")
+    parser.add_argument("--verlet", type=str, nargs="+", help="CSVs de Verlet")
+    parser.add_argument("--beeman", type=str, nargs="+", help="CSVs de Beeman")
+    parser.add_argument(
+        "--gpc", type=str, nargs="+", help="CSVs de Gear Predictor-Corrector"
+    )
 
     args = parser.parse_args()
     main(args.euler, args.verlet, args.beeman, args.gpc)
