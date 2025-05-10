@@ -3,12 +3,13 @@ package ar.edu.itba.ss
 import ch.obermuhlner.math.big.kotlin.bigdecimal.times
 import java.math.BigDecimal
 
-class Euler(settings: Settings, val deltaT: BigDecimal) : Algorithm {
+class Euler(settings: Settings, deltaT: BigDecimal) : Algorithm {
     var _currentVelocity: BigDecimal = settings.v0
     var _currentPosition: BigDecimal = settings.r0
     var _currentAcceleration: BigDecimal = BigDecimal.ZERO
 
-    val deltaTSquared = settings.deltaT * settings.deltaT
+    private val dT = deltaT
+    private val dT2 = dT * dT
 
     override val currentVelocity: BigDecimal
         get() = _currentVelocity
@@ -18,17 +19,16 @@ class Euler(settings: Settings, val deltaT: BigDecimal) : Algorithm {
         get() = _currentAcceleration
 
     override fun advanceDeltaT(acceleration: BigDecimal) {
-        val nextVelocity = calculateNextVelocity(acceleration)
-        _currentVelocity = nextVelocity
-        _currentPosition = calculateNextPosition(acceleration, nextVelocity)
+        val r0 = _currentPosition
+        val v0 = _currentVelocity
+
+        val v1 = v0 + dT * acceleration
+        val r1 = r0 + dT * v0
+
+        _currentVelocity = v1
+        _currentPosition = r1
         _currentAcceleration = acceleration
     }
-
-    private fun calculateNextVelocity(acceleration: BigDecimal): BigDecimal =
-        currentVelocity + deltaT * acceleration
-
-    private fun calculateNextPosition(acceleration: BigDecimal, nextVelocity: BigDecimal): BigDecimal =
-        currentPosition + deltaT * nextVelocity + deltaTSquared * acceleration / BigDecimal.TWO
 
     companion object {
         const val PRETTY_NAME = "Euler"
