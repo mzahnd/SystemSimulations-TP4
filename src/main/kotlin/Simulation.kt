@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
+import java.math.RoundingMode
 
 class Simulation(
     private val settings: Settings,
@@ -40,7 +41,7 @@ class Simulation(
         // Header
         output.send("time,r,v,a\n")
 
-        createLocalMathContext(16).use {
+        createLocalMathContext(34).use {
             while (currentTime <= settings.simulationTime) {
                 algorithm.advanceDeltaT() // parameter always ignored
                 currentTime += settings.deltaT
@@ -54,10 +55,10 @@ class Simulation(
     private suspend fun saveState() {
         output.send(
             listOf(
-                "%.4f".format(currentTime),
-                "%.8f".format(algorithm.currentPosition),
-                "%.8f".format(algorithm.currentVelocity),
-                "%.8f".format(algorithm.currentAcceleration),
+                currentTime.toPlainString(),
+                algorithm.currentPosition.toPlainString(),
+                algorithm.currentVelocity.toPlainString(),
+                algorithm.currentAcceleration.toPlainString(),
             ).joinToString(separator = ",", postfix = "\n")
         )
     }

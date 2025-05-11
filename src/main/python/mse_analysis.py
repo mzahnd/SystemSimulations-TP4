@@ -5,6 +5,8 @@ from typing import Dict, List, Optional
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter, LogLocator
+from decimal import Decimal, getcontext, localcontext
+from math import factorial
 import seaborn as sns
 import numpy as np
 
@@ -51,6 +53,8 @@ PLT_THEME = {
 plt.style.use(PLT_THEME)
 sns.set_palette(CUSTOM_PALETTE)
 sns.set_style(PLT_THEME)
+
+getcontext().prec = 40
 
 DPI = 100
 FIGSIZE = (1920 / DPI, 1080 / DPI)
@@ -112,6 +116,25 @@ def y_fmt(x, pos):
     """Format number as power of 10"""
     return format_power_of_10(x)
 
+# Coseno con Decimal usando serie de Taylor
+def cos_decimal(x: Decimal, terms: int = 30) -> Decimal:
+    x = x % (2 * Decimal("3.141592653589793238462643383279"))
+    result = Decimal(1)
+    num = Decimal(1)
+    denom = Decimal(1)
+    sign = -1
+    for n in range(1, terms):
+        num *= x * x
+        denom *= Decimal((2 * n - 1) * (2 * n))
+        result += sign * (num / denom)
+        sign *= -1
+    return result
+
+# Raíz cuadrada para Decimal
+def sqrt_decimal(x: Decimal) -> Decimal:
+    with localcontext() as ctx:
+        ctx.prec += 10
+        return x.sqrt()
 
 def read_csv(filepath: str) -> Output:
     config_df = pd.read_csv(filepath, nrows=1, header=0, keep_default_na=False)
@@ -124,6 +147,8 @@ def read_csv(filepath: str) -> Output:
         amplitude=float(config_df["A"][0]),
         seed=int(config_df["seed"][0]),
     )
+
+    print(filepath)
 
     df = pd.read_csv(filepath, sep=",", header=0, index_col=None, skiprows=2)
     df = df.sort_values("time")
@@ -145,22 +170,26 @@ def read_csv(filepath: str) -> Output:
 
 def calculate_oscilator(simulation_output: Output):
     params = simulation_output.params
-    gamma_over_2m = params.gamma / (2 * params.mass)
-    k_over_m = params.k / params.mass
-    gamma_square_over_4m2 = (params.gamma * params.gamma) / (
-        4 * params.mass * params.mass
+
+    gamma_over_2m = Decimal(str(params.gamma)) / (2 * Decimal(str(params.mass)))
+    k_over_m = Decimal(str(params.k)) / Decimal(str(params.mass))
+    gamma_square_over_4m2 = (Decimal(str(params.gamma)) ** 2) / (
+        4 * Decimal(str(params.mass)) ** 2
     )
-    cos_constant = np.sqrt(k_over_m - gamma_square_over_4m2)
+    cos_constant = sqrt_decimal(k_over_m - gamma_square_over_4m2)
+    amplitude = Decimal(str(params.amplitude))
 
     def r_t(t: float):
-        return (
-            params.amplitude * np.exp(t * gamma_over_2m * -1) * np.cos(t * cos_constant)
-        )
+        t_dec = Decimal(str(t))
+        exp_part = (-gamma_over_2m * t_dec).exp()
+        cos_arg = cos_constant * t_dec
+        cos_part = cos_decimal(cos_arg)
+        return amplitude * exp_part * cos_part
 
     return [
-        Instant(t=out.t, r=r_t(out.t), v=0.0, a=0.0) for out in simulation_output.values
+        Instant(t=out.t, r=float(r_t(out.t)), v=0.0, a=0.0)
+        for out in simulation_output.values
     ]
-
 
 def calculate_mse(output: Output) -> float:
     analytic_vals = calculate_oscilator(output)
@@ -168,7 +197,8 @@ def calculate_mse(output: Output) -> float:
     df = pd.DataFrame(output.values)
 
     df_merged = pd.merge(df, df_analytic, on="t", suffixes=("", "_analytic"))
-    mse = np.mean((df_merged["r"] - df_merged["r_analytic"]) ** 2)
+    mse = ((df_merged["r"] - df_merged["r_analytic"]) ** 2).mean()
+    print(f"MSE of {output.dt} is {mse:.30e}")
     return mse
 
 
@@ -183,6 +213,7 @@ def plot_mse_by_dt(outputs_by_method: Dict[str, List[Output]], output_dir: str):
     mse_data = []
     for method, outputs in outputs_by_method.items():
         for output in outputs:
+            print(f"Calculate MSE of {method}")
             mse_data.append(
                 {
                     "Method": method,
@@ -213,8 +244,11 @@ def plot_mse_by_dt(outputs_by_method: Dict[str, List[Output]], output_dir: str):
     ax.yaxis.set_major_formatter(FuncFormatter(_pow10_fmt))
 
     # ── X axis: show every dt value ────────────────────────────────
-    unique_dts = sorted(df["dt"].unique())
-    plt.xticks(unique_dts)
+    # ── X axis: logarithmic and nicely formatted ───────────────────
+    ax.set_xscale("log")
+    x_ticks = [1e-5, 1e-4, 1e-3, 1e-2]
+    ax.set_xticks(x_ticks)
+    ax.get_xaxis().set_major_formatter(FuncFormatter(_pow10_fmt))
 
     # ── labels, grid, legend ───────────────────────────────────────
     plt.xlabel("Paso de tiempo (dt)")
