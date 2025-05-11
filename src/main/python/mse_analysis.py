@@ -203,7 +203,7 @@ def calculate_mse(output: Output) -> float:
 
 
 def plot_mse_by_dt(outputs_by_method: Dict[str, List[Output]], output_dir: str):
-    Y_MIN_EXP = -26  # lower exponent     ⟵ change here if needed
+    Y_MIN_EXP = -35  # lower exponent     ⟵ change here if needed
     Y_MAX_EXP = -5  # upper exponent     ⟵ change here if needed
     Y_MIN = 10**Y_MIN_EXP
     Y_MAX = 10**Y_MAX_EXP
@@ -246,7 +246,7 @@ def plot_mse_by_dt(outputs_by_method: Dict[str, List[Output]], output_dir: str):
     # ── X axis: show every dt value ────────────────────────────────
     # ── X axis: logarithmic and nicely formatted ───────────────────
     ax.set_xscale("log")
-    x_ticks = [1e-5, 1e-4, 1e-3, 1e-2]
+    x_ticks = sorted(df["dt"].unique())
     ax.set_xticks(x_ticks)
     ax.get_xaxis().set_major_formatter(FuncFormatter(_pow10_fmt))
 
