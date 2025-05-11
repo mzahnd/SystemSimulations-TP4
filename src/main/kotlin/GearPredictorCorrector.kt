@@ -24,6 +24,9 @@ class GearPredictorCorrector(
     val dT4Over4 = (dT * dT * dT * dT) / FACTORIAL[4]
     val dT5Over5 = (dT * dT * dT * dT * dT) / FACTORIAL[5]
 
+    val kOverM = settings.k / settings.mass
+    val gOverM = settings.gamma / settings.mass
+
     override var currentVelocity: BigDecimal
         private set
     override var currentPosition: BigDecimal
@@ -32,38 +35,12 @@ class GearPredictorCorrector(
         private set
 
     init {
-        val r = settings.r0
-        val v = settings.v0
-        // Step 0: Init
-        val kOverM = settings.k / settings.mass
-        val gOverM = settings.gamma / settings.mass
-
         _r0 = settings.r0
         _r1 = settings.v0
         _r2 = -(kOverM * _r0 + gOverM * _r1)
         _r3 = -(kOverM * _r1 + gOverM * _r2)
         _r4 = -(kOverM * _r2 + gOverM * _r3)
         _r5 = -(kOverM * _r3 + gOverM * _r4)
-
-        // Step 1
-        val r0p = predictRn(0)
-        val r1p = predictRn(1)
-        val r2p = predictRn(2)
-        val r3p = predictRn(3)
-        val r4p = predictRn(4)
-        val r5p = predictRn(5)
-
-        // Step 2
-        val deltaAcceleration = acceleration(settings, r0p, r1p) - r2p
-        val deltaR2 = deltaAcceleration * dT2 / 2
-
-        // Step 3
-        _r0 = correctRn(r0p, deltaR2, 0)
-        _r1 = correctRn(r1p, deltaR2, 1)
-        _r2 = correctRn(r2p, deltaR2, 2)
-        _r3 = correctRn(r3p, deltaR2, 3)
-        _r4 = correctRn(r4p, deltaR2, 4)
-        _r5 = correctRn(r5p, deltaR2, 5)
 
         currentPosition = _r0
         currentVelocity = _r1
