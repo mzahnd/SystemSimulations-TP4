@@ -4,7 +4,7 @@
 seed=1743645648280 
 output_directory=./output 
 amplitude=1 
-deltaT=0.000001 
+deltaT=0.001
 simulation_time=5
 
 # Clear the terminal
@@ -15,6 +15,7 @@ gradle clean build
 
 # Run the simulation
 gradle run --no-build-cache --rerun-tasks --args="\
+  damped \
   -A $amplitude \
   -t $simulation_time \
   -dt $deltaT \
