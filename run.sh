@@ -1,13 +1,11 @@
 #!/bin/bash
 
 # Simulation parameters
-# number_of_particles=250     # Default: 250
-# radius=0.0005               # Default: 0.0005 m
-# mass=1.0                    # Default: 1.0 kg
-# initial_velocity=1.0        # Default: 1.0 m/s
-final_time=5.0               # No default, required
-output_directory=./output     # Required
-seed=1743645648280            # Optional, for reproducibility
+seed=1743645648280 
+output_directory=./output 
+amplitude=1 
+deltaT=0.000001 
+simulation_time=5
 
 # Clear the terminal
 clear
@@ -17,6 +15,8 @@ gradle clean build
 
 # Run the simulation
 gradle run --no-build-cache --rerun-tasks --args="\
-  -t $final_time \
+  -A $amplitude \
+  -t $simulation_time \
+  -dt $deltaT \
   --output-directory $output_directory \
   -s $seed"
