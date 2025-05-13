@@ -1,5 +1,7 @@
-package ar.edu.itba.ss
+package ar.edu.itba.ss.simulation
 
+import ar.edu.itba.ss.Integrables.Algorithm
+import ar.edu.itba.ss.utils.OutputWriter
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 

@@ -1,5 +1,10 @@
-package ar.edu.itba.ss
+package ar.edu.itba.ss.commands
 
+import ar.edu.itba.ss.Integrables.*
+import ar.edu.itba.ss.utils.OutputWriter
+import ar.edu.itba.ss.simulation.Settings
+import ar.edu.itba.ss.simulation.Simulation
+import ar.edu.itba.ss.simulation.SimulationJob
 import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.double
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -78,7 +83,7 @@ class DampedOscillatorCommand : OscillatorCommand() {
         val settings = buildSettings(GearPredictorCorrector.PRETTY_NAME)
         return initializeAlgorithm(
             settings = settings,
-            algorithm = GearPredictorCorrector(settings, Simulation::calculateAcceleration),
+            algorithm = GearPredictorCorrector(settings, Simulation.Companion::calculateAcceleration),
             scope = scope,
         )
     }
@@ -87,7 +92,7 @@ class DampedOscillatorCommand : OscillatorCommand() {
         val settings = buildSettings(Beeman.PRETTY_NAME)
         return initializeAlgorithm(
             settings = settings,
-            algorithm = Beeman(settings, Simulation::calculateAcceleration),
+            algorithm = Beeman(settings, Simulation.Companion::calculateAcceleration),
             scope = scope,
         )
     }
@@ -97,7 +102,7 @@ class DampedOscillatorCommand : OscillatorCommand() {
         return initializeAlgorithm(
             settings = settings,
             algorithm = Verlet(
-                settings, Simulation::calculateAcceleration
+                settings, Simulation.Companion::calculateAcceleration
             ),
             scope = scope,
         )
@@ -109,7 +114,7 @@ class DampedOscillatorCommand : OscillatorCommand() {
             settings = settings,
             algorithm = Euler(
                 settings = settings,
-                acceleration = Simulation::calculateAcceleration,
+                acceleration = Simulation.Companion::calculateAcceleration,
                 deltaT = settings.deltaT,
             ),
             scope = scope,

@@ -1,5 +1,6 @@
-package ar.edu.itba.ss
+package ar.edu.itba.ss.simulation
 
+import ar.edu.itba.ss.Integrables.Algorithm
 import ch.obermuhlner.math.big.DefaultBigDecimalMath.createLocalMathContext
 import ch.obermuhlner.math.big.kotlin.bigdecimal.div
 import ch.obermuhlner.math.big.kotlin.bigdecimal.plus
@@ -10,7 +11,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
-import java.math.RoundingMode
 
 class Simulation(
     private val settings: Settings,

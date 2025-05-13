@@ -1,5 +1,6 @@
-package ar.edu.itba.ss
+package ar.edu.itba.ss.utils
 
+import ar.edu.itba.ss.simulation.Settings
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import java.util.concurrent.atomic.AtomicBoolean

@@ -1,4 +1,4 @@
-package ar.edu.itba.ss
+package ar.edu.itba.ss.simulation
 
 import java.io.File
 import java.math.BigDecimal

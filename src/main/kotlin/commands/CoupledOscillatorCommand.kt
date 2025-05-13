@@ -1,4 +1,4 @@
-package ar.edu.itba.ss
+package ar.edu.itba.ss.commands
 
 import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.default

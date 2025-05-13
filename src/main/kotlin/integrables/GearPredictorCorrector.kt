@@ -1,5 +1,6 @@
-package ar.edu.itba.ss
+package ar.edu.itba.ss.Integrables
 
+import ar.edu.itba.ss.simulation.Settings
 import ch.obermuhlner.math.big.DefaultBigDecimalMath.pow
 import ch.obermuhlner.math.big.kotlin.bigdecimal.div
 import ch.obermuhlner.math.big.kotlin.bigdecimal.plus
