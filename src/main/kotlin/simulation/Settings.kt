@@ -13,8 +13,8 @@ data class Settings(
     val k: Double,
     val gamma: Double,
     val simulationTime: BigDecimal,
-    val r0: BigDecimal,
-    val v0: BigDecimal,
+    val initialPositions: List<BigDecimal>,
+    val initialVelocities: List<BigDecimal>,
     val amplitude: Double,
     val seed: Long,
 )

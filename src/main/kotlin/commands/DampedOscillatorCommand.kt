@@ -1,6 +1,6 @@
 package ar.edu.itba.ss.commands
 
-import ar.edu.itba.ss.Integrables.*
+import ar.edu.itba.ss.integrables.*
 import ar.edu.itba.ss.utils.OutputWriter
 import ar.edu.itba.ss.simulation.Settings
 import ar.edu.itba.ss.simulation.Simulation
@@ -57,8 +57,10 @@ class DampedOscillatorCommand : OscillatorCommand() {
             val euler = initializeEuler(coroutineScope)
             simulationJobs.add(euler)
 
+
             val verlet = initializeVerlet(coroutineScope)
             simulationJobs.add(verlet)
+
 
             val beeman = initializeBeeman(coroutineScope)
             simulationJobs.add(beeman)
@@ -108,6 +110,7 @@ class DampedOscillatorCommand : OscillatorCommand() {
         )
     }
 
+
     private fun initializeEuler(scope: CoroutineScope): SimulationJob {
         val settings = buildSettings(Euler.PRETTY_NAME)
         return initializeAlgorithm(
@@ -149,8 +152,8 @@ class DampedOscillatorCommand : OscillatorCommand() {
             k = springConstant,
             gamma = gamma,
             simulationTime = BigDecimal.valueOf(finalTime),
-            r0 = BigDecimal.valueOf(initialPosition),
-            v0 = calculatedInitialVelocity,
+            initialPositions = listOf((BigDecimal.valueOf(initialPosition))),
+            initialVelocities = listOf(calculatedInitialVelocity),
             amplitude = amplitude,
             seed = seed,
         )
@@ -158,7 +161,7 @@ class DampedOscillatorCommand : OscillatorCommand() {
 
     private fun initializeAlgorithm(
         settings: Settings,
-        algorithm: Algorithm,
+        algorithm: AlgorithmN,
         scope: CoroutineScope
     ): SimulationJob {
         val output = Channel<String>(capacity = Channel.UNLIMITED)

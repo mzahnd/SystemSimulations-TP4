@@ -1,4 +1,4 @@
-package ar.edu.itba.ss.Integrables
+package ar.edu.itba.ss.integrables
 
 import ar.edu.itba.ss.simulation.Settings
 import ch.obermuhlner.math.big.kotlin.bigdecimal.div
@@ -9,15 +9,15 @@ import java.math.BigDecimal
 
 class Beeman(
     val settings: Settings,
-    val acceleration: (settings: Settings, currentPosition: BigDecimal, currentVelocity: BigDecimal) -> BigDecimal
-) : Algorithm {
-    var previousPosition: BigDecimal
-    var nextPosition: BigDecimal
+    val acceleration: (settings: Settings, positions: List<BigDecimal>, velocities: List<BigDecimal>) -> List<BigDecimal>
+) : AlgorithmN {
+    var previousPositions: List<BigDecimal>
+    var nextPositions: List<BigDecimal>
 
-    var previousVelocity: BigDecimal
-    var nextVelocity: BigDecimal
+    var previousVelocities: List<BigDecimal>
+    var nextVelocities: List<BigDecimal>
 
-    var previousAcceleration: BigDecimal
+    var previousAccelerations: List<BigDecimal>
 
     val dT = settings.deltaT
     val dT2 = dT * dT
@@ -34,23 +34,23 @@ class Beeman(
     val oneOverThree = BigDecimal.ONE / BigDecimal.valueOf(3)
     val fiveOverSix = BigDecimal.valueOf(5) / BigDecimal.valueOf(6)
 
-    override var currentVelocity: BigDecimal
+    override var currentVelocities: List<BigDecimal>
         private set
-    override var currentPosition: BigDecimal
+    override var currentPositions: List<BigDecimal>
         private set
-    override var currentAcceleration: BigDecimal
+    override var currentAccelerations: List<BigDecimal>
         private set
 
     init {
-        val ri = settings.r0
-        val vi = settings.v0
+        val ri = settings.initialPositions
+        val vi = settings.initialVelocities
         val ai = acceleration(settings, ri, vi)
 
         val euler = Euler(settings, acceleration, -1 * dT)
         euler.advanceDeltaT()
 
-        val riTMinusDt = euler.currentPosition
-        val viTMinusDt = euler.currentVelocity
+        val riTMinusDt = euler.currentPositions
+        val viTMinusDt = euler.currentVelocities
         val aiMinusDt = acceleration(settings, riTMinusDt, viTMinusDt)
 
         val riTPlusDt = calculateNextPosition(
@@ -65,23 +65,23 @@ class Beeman(
             aMinusDt = aiMinusDt,
         )
 
-        previousPosition = riTMinusDt
-        currentPosition = ri
-        nextPosition = riTPlusDt
+        previousPositions = riTMinusDt
+        currentPositions = ri
+        nextPositions = riTPlusDt
 
-        previousVelocity = viTMinusDt
-        currentVelocity = vi
-        nextVelocity = viTPlusDt
+        previousVelocities = viTMinusDt
+        currentVelocities = vi
+        nextVelocities = viTPlusDt
 
-        previousAcceleration = aiMinusDt
-        currentAcceleration = ai
+        previousAccelerations = aiMinusDt
+        currentAccelerations = ai
     }
 
     override fun advanceDeltaT() {
-        val ri = currentPosition
-        val vi = currentVelocity
-        val ai = currentAcceleration
-        val aiTMinusDt = previousAcceleration
+        val ri = currentPositions
+        val vi = currentVelocities
+        val ai = currentAccelerations
+        val aiTMinusDt = previousAccelerations
         // Predict
         val riTPlusDt = calculateNextPosition(ri, vi, ai, aiTMinusDt)
         val viTPlusDtPredicted = predictNextVelocity(vi, ai, aiTMinusDt)
@@ -90,49 +90,74 @@ class Beeman(
         // Correct
         val viTPlusDt = correctVelocity(vi, aiTPlusDt, ai, aiTMinusDt)
         // Shift to current values, and correct v
-        previousPosition = ri
-        currentPosition = riTPlusDt
-        previousAcceleration = ai
-        currentAcceleration = aiTPlusDt
-        previousVelocity = vi
-        currentVelocity = viTPlusDt
+        previousPositions = ri
+        currentPositions = riTPlusDt
+        previousAccelerations = ai
+        currentAccelerations = aiTPlusDt
+        previousVelocities = vi
+        currentVelocities = viTPlusDt
         // Predict next step
-        nextPosition = calculateNextPosition(
-            currentPosition,
-            currentVelocity,
-            currentAcceleration,
-            previousAcceleration,
+        nextPositions = calculateNextPosition(
+            currentPositions,
+            currentVelocities,
+            currentAccelerations,
+            previousAccelerations,
         )
-        nextVelocity = predictNextVelocity(
-            currentVelocity,
-            currentAcceleration,
-            previousAcceleration,
+        nextVelocities = predictNextVelocity(
+            currentVelocities,
+            currentAccelerations,
+            previousAccelerations,
         )
     }
 
-    // x(t + dT)
+    // x(t + dT) for all particles
     private fun calculateNextPosition(
-        x: BigDecimal,
-        v: BigDecimal,
-        a: BigDecimal,
-        aMinusDt: BigDecimal
-    ) =
-        x + v * dT + twoOverThree * a * dT2 - oneOverSix * aMinusDt * dT2
+        x: List<BigDecimal>,
+        v: List<BigDecimal>,
+        a: List<BigDecimal>,
+        aMinusDt: List<BigDecimal>
+    ): List<BigDecimal> {
+        require(x.size == v.size && x.size == a.size && x.size == aMinusDt.size) {
+            "All input lists must have the same size"
+        }
 
+        return x.indices.map { i ->
+            x[i] + v[i] * dT + twoOverThree * a[i] * dT2 - oneOverSix * aMinusDt[i] * dT2
+        }
+    }
+
+    // v(t + dT) predicted for all particles
     private fun predictNextVelocity(
-        v: BigDecimal,
-        a: BigDecimal,
-        aMinusDt: BigDecimal
-    ): BigDecimal =
-        v + threeOverTwo * a * dT - oneOverTwo * aMinusDt * dT
+        v: List<BigDecimal>,
+        a: List<BigDecimal>,
+        aMinusDt: List<BigDecimal>
+    ): List<BigDecimal> {
+        require(v.size == a.size && v.size == aMinusDt.size) {
+            "All input lists must have the same size"
+        }
 
+        return v.indices.map { i ->
+            v[i] + threeOverTwo * a[i] * dT - oneOverTwo * aMinusDt[i] * dT
+        }
+    }
+
+    // v(t + dT) corrected for all particles
     private fun correctVelocity(
-        v: BigDecimal,
-        aPlusDt: BigDecimal,
-        a: BigDecimal,
-        aMinusDt: BigDecimal
-    ): BigDecimal =
-        v + oneOverThree * aPlusDt * dT + fiveOverSix * a * dT - oneOverSix * aMinusDt * dT
+        v: List<BigDecimal>,
+        aPlusDt: List<BigDecimal>,
+        a: List<BigDecimal>,
+        aMinusDt: List<BigDecimal>
+    ): List<BigDecimal> {
+        require(v.size == aPlusDt.size && v.size == a.size && v.size == aMinusDt.size) {
+            "All input lists must have the same size"
+        }
+
+        return v.indices.map { i ->
+            v[i] + oneOverThree * aPlusDt[i] * dT +
+                    fiveOverSix * a[i] * dT -
+                    oneOverSix * aMinusDt[i] * dT
+        }
+    }
 
     companion object {
         const val PRETTY_NAME = "Beeman"

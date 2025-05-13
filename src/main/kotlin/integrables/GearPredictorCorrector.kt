@@ -1,4 +1,4 @@
-package ar.edu.itba.ss.Integrables
+package ar.edu.itba.ss.integrables
 
 import ar.edu.itba.ss.simulation.Settings
 import ch.obermuhlner.math.big.DefaultBigDecimalMath.pow
@@ -9,14 +9,14 @@ import java.math.BigDecimal
 
 class GearPredictorCorrector(
     val settings: Settings,
-    val acceleration: (settings: Settings, currentPosition: BigDecimal, currentVelocity: BigDecimal) -> BigDecimal
-) : Algorithm {
-    var _r0: BigDecimal
-    var _r1: BigDecimal
-    var _r2: BigDecimal
-    var _r3: BigDecimal
-    var _r4: BigDecimal
-    var _r5: BigDecimal
+    val acceleration: (settings: Settings, positions: List<BigDecimal>, velocities: List<BigDecimal>) -> List<BigDecimal>
+) : AlgorithmN {
+    var _r0: List<BigDecimal>
+    var _r1: List<BigDecimal>
+    var _r2: List<BigDecimal>
+    var _r3: List<BigDecimal>
+    var _r4: List<BigDecimal>
+    var _r5: List<BigDecimal>
 
     val dT = settings.deltaT
     val dT2 = dT * dT
@@ -28,24 +28,24 @@ class GearPredictorCorrector(
     val kOverM = settings.k / settings.mass
     val gOverM = settings.gamma / settings.mass
 
-    override var currentVelocity: BigDecimal
+    override var currentVelocities: List<BigDecimal>
         private set
-    override var currentPosition: BigDecimal
+    override var currentPositions: List<BigDecimal>
         private set
-    override var currentAcceleration: BigDecimal
+    override var currentAccelerations: List<BigDecimal>
         private set
 
     init {
-        _r0 = settings.r0
-        _r1 = settings.v0
-        _r2 = -(kOverM * _r0 + gOverM * _r1)
-        _r3 = -(kOverM * _r1 + gOverM * _r2)
-        _r4 = -(kOverM * _r2 + gOverM * _r3)
-        _r5 = -(kOverM * _r3 + gOverM * _r4)
+        _r0 = settings.initialPositions
+        _r1 = settings.initialVelocities
+        _r2 = _r0.indices.map { i -> -(kOverM * _r0[i] + gOverM * _r1[i]) }
+        _r3 = _r1.indices.map { i -> -(kOverM * _r1[i] + gOverM * _r2[i]) }
+        _r4 = _r2.indices.map { i -> -(kOverM * _r2[i] + gOverM * _r3[i]) }
+        _r5 = _r3.indices.map { i -> -(kOverM * _r3[i] + gOverM * _r4[i]) }
 
-        currentPosition = _r0
-        currentVelocity = _r1
-        currentAcceleration = _r2
+        currentPositions = _r0
+        currentVelocities = _r1
+        currentAccelerations = _r2
     }
 
     override fun advanceDeltaT() {
@@ -58,8 +58,8 @@ class GearPredictorCorrector(
         val r5p = predictRn(5)
 
         // Step 2
-        val deltaAcceleration = acceleration(settings, r0p, r1p) - r2p
-        val deltaR2 = deltaAcceleration * dT2 / FACTORIAL[2]
+        val a2 = acceleration(settings, r0p, r1p)
+        val deltaR2 = a2.indices.map { i -> (a2[i] - r2p[i]) * dT2 / FACTORIAL[2] }
 
         // Step 3
         _r0 = correctRn(r0p, deltaR2, 0)
@@ -69,24 +69,43 @@ class GearPredictorCorrector(
         _r4 = correctRn(r4p, deltaR2, 4)
         _r5 = correctRn(r5p, deltaR2, 5)
 
-        currentPosition = _r0
-        currentVelocity = _r1
-        currentAcceleration = _r2
+        currentPositions = _r0
+        currentVelocities = _r1
+        currentAccelerations = _r2
     }
 
-    private fun predictRn(order: Int) =
-        when (order) {
-            0 -> _r0 + _r1 * dT + _r2 * dT2Over2 + _r3 * dT3Over3 + _r4 * dT4Over4 + _r5 * dT5Over5
-            1 -> _r1 + _r2 * dT + _r3 * dT2Over2 + _r4 * dT3Over3 + _r5 * dT4Over4
-            2 -> _r2 + _r3 * dT + _r4 * dT2Over2 + _r5 * dT3Over3
-            3 -> _r3 + _r4 * dT + _r5 * dT2Over2
-            4 -> _r4 + _r5 * dT
+    private fun predictRn(order: Int): List<BigDecimal> {
+        return when (order) {
+            0 -> _r0.indices.map { i ->
+                _r0[i] + _r1[i] * dT + _r2[i] * dT2Over2 +
+                        _r3[i] * dT3Over3 + _r4[i] * dT4Over4 + _r5[i] * dT5Over5
+            }
+            1 -> _r1.indices.map { i ->
+                _r1[i] + _r2[i] * dT + _r3[i] * dT2Over2 + _r4[i] * dT3Over3 + _r5[i] * dT4Over4
+            }
+            2 -> _r2.indices.map { i ->
+                _r2[i] + _r3[i] * dT + _r4[i] * dT2Over2 + _r5[i] * dT3Over3
+            }
+            3 -> _r3.indices.map { i ->
+                _r3[i] + _r4[i] * dT + _r5[i] * dT2Over2
+            }
+            4 -> _r4.indices.map { i ->
+                _r4[i] + _r5[i] * dT
+            }
             5 -> _r5
             else -> throw IllegalArgumentException("Invalid order $order")
         }
+    }
 
-    private fun correctRn(rnp: BigDecimal, deltaR2: BigDecimal, order: Int) =
-        rnp + ALPHAS[order] * deltaR2 * FACTORIAL[order] / pow(dT, order.toLong())
+    private fun correctRn(
+        rnp: List<BigDecimal>,
+        deltaR2: List<BigDecimal>,
+        order: Int
+    ): List<BigDecimal> {
+        return rnp.indices.map { i ->
+            rnp[i] + ALPHAS[order] * deltaR2[i] * FACTORIAL[order] / pow(dT, order.toLong())
+        }
+    }
 
     companion object {
         const val PRETTY_NAME = "Gear Predictor-Corrector"

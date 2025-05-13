@@ -1,4 +1,4 @@
-package ar.edu.itba.ss.Integrables
+package ar.edu.itba.ss.integrables
 
 import ar.edu.itba.ss.simulation.Settings
 import ch.obermuhlner.math.big.kotlin.bigdecimal.times
@@ -6,29 +6,29 @@ import java.math.BigDecimal
 
 class Euler(
     val settings: Settings,
-    val acceleration: (settings: Settings, currentPosition: BigDecimal, currentVelocity: BigDecimal) -> BigDecimal,
+    val acceleration: (settings: Settings, positions: List<BigDecimal>, velocities: List<BigDecimal>) -> List<BigDecimal>,
     deltaT: BigDecimal
-) : Algorithm {
+) : AlgorithmN {
     private val dT = deltaT
 
-    override var currentVelocity: BigDecimal = settings.v0
+    override var currentVelocities: List<BigDecimal> = settings.initialVelocities
         private set
-    override var currentPosition: BigDecimal = settings.r0
+    override var currentPositions: List<BigDecimal> = settings.initialPositions
         private set
-    override var currentAcceleration: BigDecimal = acceleration(settings, currentPosition, currentVelocity)
+    override var currentAccelerations: List<BigDecimal> = acceleration(settings, currentPositions, currentVelocities)
         private set
 
     override fun advanceDeltaT() {
-        val r0 = currentPosition
-        val v0 = currentVelocity
-        val a0 = currentAcceleration
+        val r0 = currentPositions
+        val v0 = currentVelocities
+        val a0 = currentAccelerations
 
-        val v1 = v0 + dT * a0
-        val r1 = r0 + dT * v1
+        val v1 = v0.indices.map { i -> v0[i] + dT * a0[i] }
+        val r1 = r0.indices.map { i -> r0[i] + dT * v1[i] }
 
-        currentVelocity = v1
-        currentPosition = r1
-        currentAcceleration = acceleration(settings, r1, v1)
+        currentVelocities = v1
+        currentPositions = r1
+        currentAccelerations = acceleration(settings, r1, v1)
     }
 
     companion object {

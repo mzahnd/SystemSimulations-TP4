@@ -1,4 +1,4 @@
-package ar.edu.itba.ss.Integrables
+package ar.edu.itba.ss.integrables
 
 import java.math.BigDecimal
 
