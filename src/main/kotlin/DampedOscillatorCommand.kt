@@ -1,10 +1,7 @@
 package ar.edu.itba.ss
 
-import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.double
-import com.github.ajalt.clikt.parameters.types.long
-import com.github.ajalt.clikt.parameters.types.path
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -12,34 +9,10 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.math.BigDecimal
-import java.nio.file.Path
 import kotlin.random.Random
 
-class DampedOscillatorCommand : CliktCommand(name = "damped") {
+class DampedOscillatorCommand : OscillatorCommand() {
     private val logger = KotlinLogging.logger {}
-
-    private val mass: Double by option("-m", "--mass")
-        .double()
-        .default(70.0)
-        .help("Mass [kg]")
-        .check("Must be greater than 0") { it > 0.0 }
-
-    private val springConstant: Long by option("-k", "--spring-constant")
-        .long()
-        .help("Spring constant k [N/m]")
-        .default(10000L)
-
-    private val gamma: Long by option("-y", "--gamma")
-        .long()
-        .help("Gamma kg/s")
-        .default(100)
-
-    private val finalTime: Double by option("-t", "--tf", "--simulation-time")
-        .double()
-        .default(5.0)
-        .help("Total simulation time [s]")
-        .check("Must be greater than 0") { it > 0.0 }
-
 
     private val initialPosition: Double by option("-r", "--r0", "--initial-position")
         .double()
@@ -47,29 +20,10 @@ class DampedOscillatorCommand : CliktCommand(name = "damped") {
         .help("r(t=0) [m]")
         .check("Must be non-negative") { it >= 0.0 }
 
-    private val amplitude: Long by option("-A", "--amplitude")
-        .long()
-        .required()
-        .help("A")
-        .check("Must be greater than zero") { it >= 0 }
-
     private val initialVelocity: Double? by option("-v", "--v0", "--initial-velocity")
         .double()
         .help("Initial velocity of the particles [m/s]")
         .check("Must be non-negative") { it >= 0.0 }
-
-    private val deltaT: Double by option("-dt", "--deltaT")
-        .double()
-        .default(1.0)
-        .help("dT [s]")
-        .check("Must be greater than 0") { it > 0.0 }
-
-    private val seed: Long by option("-s", "--seed").long().default(System.currentTimeMillis())
-        .help("[Optional] Seed for the RND").check("Seed must be greater or equal to 0.") { it > 0 }
-
-    private val outputDirectory: Path by option().path(
-        canBeFile = false, canBeDir = true, mustExist = true, mustBeReadable = true, mustBeWritable = true
-    ).required().help("Path to the output directory.")
 
     val calculatedInitialVelocity: BigDecimal by lazy {
         if (initialVelocity != null) {

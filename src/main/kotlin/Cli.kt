@@ -1,9 +1,5 @@
 package ar.edu.itba.ss
 
-import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.NoOpCliktCommand
 
-class Cli : CliktCommand() {
-    override fun run() {
-        //NOTHING
-    }
-}
+class Cli : NoOpCliktCommand()

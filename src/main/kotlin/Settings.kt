@@ -10,11 +10,11 @@ data class Settings(
     //
     val deltaT: BigDecimal,
     val mass: BigDecimal,
-    val k: Long,
-    val gamma: Long,
+    val k: Double,
+    val gamma: Double,
     val simulationTime: BigDecimal,
     val r0: BigDecimal,
     val v0: BigDecimal,
-    val amplitude: Long,
+    val amplitude: Double,
     val seed: Long,
 )
