@@ -1,5 +1,7 @@
 package ar.edu.itba.ss.simulation
 
+import ch.obermuhlner.math.big.DefaultBigDecimalMath.cos
+import ch.obermuhlner.math.big.DefaultBigDecimalMath.sin
 import java.io.File
 import java.math.BigDecimal
 import kotlin.random.Random
@@ -40,10 +42,21 @@ data class CoupledSettings(
 ) : SimulationSettings by basicSettings {
     // We delegate most properties to basicSettings
     // but can add coupled-specific behavior here
-
     override val initialPositions: List<BigDecimal>
         get() = basicSettings.initialPositions.take(numberOfParticles)
 
     override val initialVelocities: List<BigDecimal>
         get() = basicSettings.initialVelocities.take(numberOfParticles)
+
+    // Track current driven particle state
+    var currentDrivenPosition: BigDecimal = BigDecimal.ZERO
+    var currentDrivenVelocity: BigDecimal = BigDecimal.ZERO
+
+    fun updateDrivenParticle(time: BigDecimal) {
+        currentDrivenPosition = basicSettings.amplitude.toBigDecimal() *
+                sin(angularFrequency.toBigDecimal() * time)
+        currentDrivenVelocity = angularFrequency.toBigDecimal() *
+                basicSettings.amplitude.toBigDecimal() *
+                cos(angularFrequency.toBigDecimal() * time)
+    }
 }

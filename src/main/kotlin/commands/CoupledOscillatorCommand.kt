@@ -23,7 +23,7 @@ class CoupledOscillatorCommand : OscillatorCommand() {
 
     private val numberOfParticles: Int by option("-N", "--number-of-particles")
         .int()
-        .default(10)
+        .default(100)
         .help("N - Number of particles")
         .check("Must be greater than zero") { it > 0 }
 
@@ -54,7 +54,7 @@ class CoupledOscillatorCommand : OscillatorCommand() {
         runBlocking {
             val euler = initializeEuler(coroutineScope)
             simulationJobs.add(euler)
-
+            /*
             val verlet = initializeVerlet(coroutineScope)
             simulationJobs.add(verlet)
 
@@ -63,7 +63,7 @@ class CoupledOscillatorCommand : OscillatorCommand() {
 
             val gear = initializeGearPredictorCorrector(coroutineScope)
             simulationJobs.add(gear)
-
+            */
             simulationJobs.forEach { it.jobParams.simulationJob.join() }
             logger.info { "All simulations finished. Waiting for writer to finish." }
 
@@ -109,7 +109,7 @@ class CoupledOscillatorCommand : OscillatorCommand() {
         return initializeCoupledAlgorithm(
             settings = settings,
             algorithm = Euler(
-                settings = settings.basicSettings,
+                settings = settings,
                 acceleration = Simulation.Companion::calculateAcceleration,
                 deltaT = settings.basicSettings.deltaT
             ),
@@ -139,7 +139,8 @@ class CoupledOscillatorCommand : OscillatorCommand() {
         val basicSettings = buildBasicSettings(algorithmName)
         return CoupledSettings(
             basicSettings = basicSettings,
-            numberOfParticles = numberOfParticles,
+            //Not consider the driver particle
+            numberOfParticles = numberOfParticles-1,
             angularFrequency = angularFrequency,
             springLength = springLength
         )

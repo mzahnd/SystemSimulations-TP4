@@ -30,6 +30,9 @@ class Simulation<T : SimulationSettings>(
 
         createLocalMathContext(34).use {
             while (currentTime <= settings.simulationTime) {
+                if (settings is CoupledSettings) {
+                    settings.updateDrivenParticle(currentTime)
+                }
                 algorithm.advanceDeltaT()
                 currentTime += settings.deltaT
                 saveState()
@@ -73,11 +76,25 @@ class Simulation<T : SimulationSettings>(
     }
 
     private suspend fun saveState() {
+
+        // Save driven particle state if coupled system
+        if (settings is CoupledSettings) {
+            output.send(
+                listOf(
+                    currentTime.toPlainString(),
+                    "0", // Particle ID
+                    settings.currentDrivenPosition.toPlainString(),
+                    settings.currentDrivenVelocity.toPlainString(),
+                    "0" // Acceleration is 0 for driven particle
+                ).joinToString(separator = ",", postfix = "\n")
+            )
+        }
+
         algorithm.currentPositions.forEachIndexed { index, position ->
             output.send(
                 listOf(
                     currentTime.toPlainString(),
-                    index.toString(), // Particle ID
+                    index.inc().toString(), // Particle ID
                     position.toPlainString(),
                     algorithm.currentVelocities[index].toPlainString(),
                     algorithm.currentAccelerations[index].toPlainString(),
@@ -117,7 +134,29 @@ class Simulation<T : SimulationSettings>(
             currentPositions: List<BigDecimal>,
             currentVelocities: List<BigDecimal>
         ): List<BigDecimal> {
-            return listOf(BigDecimal.ZERO)
+            val k = settings.basicSettings.k.toBigDecimal()
+            val gamma = settings.basicSettings.gamma.toBigDecimal()
+            val mass = settings.basicSettings.mass
+
+            return currentPositions.indices.map { i ->
+                // Left neighbor is either driven particle or previous integrated particle
+                val leftNeighbor = when (i) {
+                    0 -> settings.currentDrivenPosition  // First integrated particle connects to driven
+                    else -> currentPositions[i-1]
+                }
+
+                // Right neighbor (if exists)
+                val rightNeighbor = if (i == currentPositions.lastIndex)
+                    null  // Last particle has no right neighbor
+                else
+                    currentPositions[i+1]
+
+                var force = -k * (currentPositions[i] - leftNeighbor)
+                rightNeighbor?.let { force += -k * (currentPositions[i] - it) }
+                force += -gamma * currentVelocities[i]
+
+                force / mass
+            }
         }
     }
 }

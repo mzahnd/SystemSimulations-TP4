@@ -4,7 +4,7 @@
 seed=1743645648280 
 output_directory=./output 
 amplitude=1.0
-deltaT=0.00001
+deltaT=0.001
 simulation_time=5
 
 # Clear the terminal

@@ -1,12 +1,13 @@
 package ar.edu.itba.ss.integrables
 
 import ar.edu.itba.ss.simulation.Settings
+import ar.edu.itba.ss.simulation.SimulationSettings
 import ch.obermuhlner.math.big.kotlin.bigdecimal.times
 import java.math.BigDecimal
 
-class Euler(
-    val settings: Settings,
-    val acceleration: (settings: Settings, positions: List<BigDecimal>, velocities: List<BigDecimal>) -> List<BigDecimal>,
+class Euler<T : SimulationSettings>(
+    val settings: T,
+    val acceleration: (settings: T, positions: List<BigDecimal>, velocities: List<BigDecimal>) -> List<BigDecimal>,
     deltaT: BigDecimal
 ) : AlgorithmN {
     private val dT = deltaT
