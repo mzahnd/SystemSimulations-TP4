@@ -23,7 +23,7 @@ class CoupledOscillatorCommand : OscillatorCommand() {
 
     private val numberOfParticles: Int by option("-N", "--number-of-particles")
         .int()
-        .default(100)
+        .default(1000)
         .help("N - Number of particles")
         .check("Must be greater than zero") { it > 0 }
 

@@ -1,14 +1,15 @@
 #!/bin/bash
 
 # Simulation parameters
-seed=1743645648280 
-output_directory=./output 
+seed=1743645648280
+output_directory=./output
 amplitude=0.01
 deltaT=0.001
-simulation_time=5
+simulation_time=15
 mass=0.00021
 spring_constant=102.3
 gamma=0.0003
+angular_frequency=15
 
 # Clear the terminal
 clear
@@ -25,5 +26,6 @@ gradle run --no-build-cache --rerun-tasks --args="\
   -A $amplitude \
   -t $simulation_time \
   -dt $deltaT \
+  -w $angular_frequency \
   --output-directory $output_directory \
   -s $seed"

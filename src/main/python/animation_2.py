@@ -17,10 +17,11 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-MAX_DESIRED_FPS = 24
+MAX_DESIRED_FPS = 60
 
-PARTICLE_RADIUS = 0.0005
+PARTICLE_RADIUS = 0.00005
 BOARD_LEN = 1
+L0 = 0.001
 output_file = args.output_file
 
 df = pd.read_csv(
@@ -28,20 +29,23 @@ df = pd.read_csv(
     sep=",",  # separator (default is comma)
     header=0,  # use first row as header
     index_col=None,  # don't use any column as index
-    skiprows=0,
+    skiprows=2,
 )  # number of rows to skip
 
-
-print(df)
+# Filter by time to get less rows to animate
+df = df[(df["time"] * 1000).astype(int) % 50 == 0]
 
 # Set Time as index
 df.set_index("time", inplace=True)
+
+print(df)
+
 
 # Get unique times
 times = df.index.unique()
 
 # Calculate interval to make animation last exactly 15 seconds
-TOTAL_DURATION = 15  # seconds
+TOTAL_DURATION = 12  # seconds
 interval = (TOTAL_DURATION * 1000) / len(times)  # convert to milliseconds
 
 # Create figure and axis
@@ -63,13 +67,6 @@ def init():
     for circle in circles:
         circle.remove()
     circles.clear()
-
-    # Get initial data for quiver plot
-    initial_data = df.loc[times[0]]
-    x = initial_data["x"].values
-    y = initial_data["y"].values
-    vx = initial_data["vx"].values
-    vy = initial_data["vy"].values
     return
 
 
@@ -85,10 +82,8 @@ def update(frame):
 
     # Create new circles for each particle
     for _, particle in time_data.iterrows():
-        if abs(particle["x"]) > 0.1 or abs(particle["y"]) > 0.1:
-            print(f"Particle: ({particle['x']}, {particle['y']})")
         circle = patches.Circle(
-            (particle["x"], particle["y"]),
+            (particle["id"]*L0, particle["r"]),
             radius=PARTICLE_RADIUS,
             fill=True,
             color="blue",
@@ -114,7 +109,7 @@ os.makedirs("./animations", exist_ok=True)
 ani.save(
     f"./animations/{output_file}-simulation.mp4",
     writer="ffmpeg",
-    fps=min(len(times) / TOTAL_DURATION, MAX_DESIRED_FPS),
+    fps=len(times) / TOTAL_DURATION,
     dpi=100,
     extra_args=["-crf", "26", "-preset", "veryfast"],
 )  # smaller file, faster encode
