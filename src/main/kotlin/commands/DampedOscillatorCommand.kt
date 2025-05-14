@@ -1,6 +1,7 @@
 package ar.edu.itba.ss.commands
 
 import ar.edu.itba.ss.integrables.*
+import ar.edu.itba.ss.simulation.DampedSimulationJob
 import ar.edu.itba.ss.utils.OutputWriter
 import ar.edu.itba.ss.simulation.Settings
 import ar.edu.itba.ss.simulation.Simulation
@@ -39,7 +40,6 @@ class DampedOscillatorCommand : OscillatorCommand() {
     }
 
     override fun run() {
-
         logger.info { "Starting simulation with the following parameters:" }
         logger.info { "Particle mass: $mass [kg]" }
         logger.info { "Spring constant: $springConstant [kg]" }
@@ -49,18 +49,15 @@ class DampedOscillatorCommand : OscillatorCommand() {
         logger.info { "Initial velocity: $calculatedInitialVelocity [m/s]" }
         logger.info { "Seed: $seed" }
 
-
         val coroutineScope = CoroutineScope(Dispatchers.Default)
 
-        val simulationJobs = mutableListOf<SimulationJob>()
+        val simulationJobs = mutableListOf<DampedSimulationJob>()
         runBlocking {
             val euler = initializeEuler(coroutineScope)
             simulationJobs.add(euler)
 
-
             val verlet = initializeVerlet(coroutineScope)
             simulationJobs.add(verlet)
-
 
             val beeman = initializeBeeman(coroutineScope)
             simulationJobs.add(beeman)
@@ -68,12 +65,13 @@ class DampedOscillatorCommand : OscillatorCommand() {
             val gear = initializeGearPredictorCorrector(coroutineScope)
             simulationJobs.add(gear)
 
-            simulationJobs.forEach { it.simulationJob.join() }
+            // Access jobParams for each property
+            simulationJobs.forEach { it.jobParams.simulationJob.join() }
             logger.info { "All simulations finished. Waiting for writer to finish." }
 
-            simulationJobs.forEach { it.writer.requestStop() }
-            simulationJobs.forEach { it.writerJob.join() }
-            simulationJobs.forEach { it.output.close() }
+            simulationJobs.forEach { it.jobParams.writer.requestStop() }
+            simulationJobs.forEach { it.jobParams.writerJob.join() }
+            simulationJobs.forEach { it.jobParams.output.close() }
 
             logger.info { "Simulations completed." }
             logger.info { "Outputs saved to:" }
@@ -81,7 +79,7 @@ class DampedOscillatorCommand : OscillatorCommand() {
         }
     }
 
-    private fun initializeGearPredictorCorrector(scope: CoroutineScope): SimulationJob {
+    private fun initializeGearPredictorCorrector(scope: CoroutineScope): DampedSimulationJob {
         val settings = buildSettings(GearPredictorCorrector.PRETTY_NAME)
         return initializeAlgorithm(
             settings = settings,
@@ -90,7 +88,7 @@ class DampedOscillatorCommand : OscillatorCommand() {
         )
     }
 
-    private fun initializeBeeman(scope: CoroutineScope): SimulationJob {
+    private fun initializeBeeman(scope: CoroutineScope): DampedSimulationJob {
         val settings = buildSettings(Beeman.PRETTY_NAME)
         return initializeAlgorithm(
             settings = settings,
@@ -99,7 +97,7 @@ class DampedOscillatorCommand : OscillatorCommand() {
         )
     }
 
-    private fun initializeVerlet(scope: CoroutineScope): SimulationJob {
+    private fun initializeVerlet(scope: CoroutineScope): DampedSimulationJob {
         val settings = buildSettings(Verlet.PRETTY_NAME)
         return initializeAlgorithm(
             settings = settings,
@@ -111,7 +109,7 @@ class DampedOscillatorCommand : OscillatorCommand() {
     }
 
 
-    private fun initializeEuler(scope: CoroutineScope): SimulationJob {
+    private fun initializeEuler(scope: CoroutineScope): DampedSimulationJob {
         val settings = buildSettings(Euler.PRETTY_NAME)
         return initializeAlgorithm(
             settings = settings,
@@ -163,7 +161,7 @@ class DampedOscillatorCommand : OscillatorCommand() {
         settings: Settings,
         algorithm: AlgorithmN,
         scope: CoroutineScope
-    ): SimulationJob {
+    ): DampedSimulationJob {
         val output = Channel<String>(capacity = Channel.UNLIMITED)
         val writer = OutputWriter(settings = settings, channel = output)
         val simulation = Simulation(settings, output = output, algorithm = algorithm)
@@ -171,13 +169,17 @@ class DampedOscillatorCommand : OscillatorCommand() {
         val writerJob = scope.launch { writer.start() }
         val simulationJob = scope.launch { simulation.simulate() }
 
-        return SimulationJob(
+        val baseJob = SimulationJob(
             algorithm = algorithm,
             output = output,
             writer = writer,
             writerJob = writerJob,
             simulation = simulation,
-            simulationJob = simulationJob,
+            simulationJob = simulationJob
+        )
+
+        return DampedSimulationJob(
+            jobParams = baseJob,
             settings = settings
         )
     }
