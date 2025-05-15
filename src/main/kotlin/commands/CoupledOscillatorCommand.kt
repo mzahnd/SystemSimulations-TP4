@@ -52,18 +52,18 @@ class CoupledOscillatorCommand : OscillatorCommand() {
 
         val simulationJobs = mutableListOf<CoupledSimulationJob>()
         runBlocking {
-            val euler = initializeEuler(coroutineScope)
-            simulationJobs.add(euler)
-            /*
-            val verlet = initializeVerlet(coroutineScope)
-            simulationJobs.add(verlet)
+            //val euler = initializeEuler(coroutineScope)
+            //simulationJobs.add(euler)
+
+            //val verlet = initializeVerlet(coroutineScope)
+            //simulationJobs.add(verlet)
 
             val beeman = initializeBeeman(coroutineScope)
             simulationJobs.add(beeman)
 
-            val gear = initializeGearPredictorCorrector(coroutineScope)
-            simulationJobs.add(gear)
-            */
+            //val gear = initializeGearPredictorCorrector(coroutineScope)
+            //simulationJobs.add(gear)
+
             simulationJobs.forEach { it.jobParams.simulationJob.join() }
             logger.info { "All simulations finished. Waiting for writer to finish." }
 
@@ -90,7 +90,7 @@ class CoupledOscillatorCommand : OscillatorCommand() {
         val settings = buildCoupledSettings(Beeman.PRETTY_NAME)
         return initializeCoupledAlgorithm(
             settings = settings,
-            algorithm = Beeman(settings.basicSettings, Simulation.Companion::calculateAcceleration),
+            algorithm = Beeman(settings, Simulation.Companion::calculateAcceleration),
             scope = scope
         )
     }
@@ -99,7 +99,7 @@ class CoupledOscillatorCommand : OscillatorCommand() {
         val settings = buildCoupledSettings(Verlet.PRETTY_NAME)
         return initializeCoupledAlgorithm(
             settings = settings,
-            algorithm = Verlet(settings.basicSettings, Simulation.Companion::calculateAcceleration),
+            algorithm = Verlet(settings, Simulation.Companion::calculateAcceleration),
             scope = scope
         )
     }

@@ -1,6 +1,5 @@
 package ar.edu.itba.ss.integrables
 
-import ar.edu.itba.ss.simulation.Settings
 import ar.edu.itba.ss.simulation.SimulationSettings
 import ch.obermuhlner.math.big.kotlin.bigdecimal.times
 import java.math.BigDecimal
