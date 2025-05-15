@@ -147,12 +147,12 @@ class Simulation<T : SimulationSettings>(
 
                 // Right neighbor (if exists)
                 val rightNeighbor = if (i == currentPositions.lastIndex)
-                    null  // Last particle has no right neighbor
+                    BigDecimal.ZERO  // We can assume that the last particle is attached to a particle with infinite mass that has always the zero position
                 else
                     currentPositions[i+1]
 
                 var force = -k * (currentPositions[i] - leftNeighbor)
-                rightNeighbor?.let { force += -k * (currentPositions[i] - it) }
+                rightNeighbor.let { force += -k * (currentPositions[i] - it) }
                 force += -gamma * currentVelocities[i]
 
                 force / mass

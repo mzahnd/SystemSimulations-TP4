@@ -9,7 +9,7 @@ simulation_time=15
 mass=0.00021
 spring_constant=102.3
 gamma=0.0003
-angular_frequency=15
+angular_frequency=8
 
 # Clear the terminal
 clear
