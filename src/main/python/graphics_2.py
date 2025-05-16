@@ -2,43 +2,50 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-import matplotlib.patches as patches
-import argparse
-from typing import Union
-import logging
+import re
 
 PARTICLE_RADIUS = 0.0005
 BOARD_LEN = 1
 NUMBER_OF_PARTICLES = 1000
 PLOTS_DIR = "./graphics"
+OUTPUT_DIR = "./output"
 
+def extract_w(filename: str) -> float:
+    match = re.search(r"w-(\d+_\d+)", filename)
+    if match:
+        return float(match.group(1).replace("_", "."))
+    raise ValueError(f"Could not extract 'w' from filename: {filename}")
 
-
-"""
-This function should plot the amplitude of the system over time
-
-"""
-def plot_amplitudes(df: pd.DataFrame):
-    # Set Time as index
+def compute_amplitudes(df: pd.DataFrame) -> pd.Series:
     df.set_index("time", inplace=True)
-
-    # Get unique times
-    times = df.index.unique()
-
     amplitudes = []
-    for t in times:
+
+    for t in df.index.unique():
         time_data = df.loc[t]
-        
-        # Calculate max and min y positions
         y_max = time_data['y'].max()
         y_min = time_data['y'].min()
-        
-        # Calculate amplitude and adjust it
         amplitude = (y_max - y_min) / 2
+        amplitudes.append((t, amplitude))
+
+    return pd.Series(dict(amplitudes)).sort_index()
+
+def plot_amplitudes(df: pd.DataFrame):
+    df.set_index("time", inplace=True)
+
+    times = df.index.unique()
+    amplitudes = []
+    max_amplitude = -np.inf
+
+    for t in times:
+        time_data = df.loc[t]
+        r_max = time_data['r'].max()
+        r_min = time_data['r'].min()
+        amplitude = r_max - r_min
         amplitudes.append(amplitude)
-    
-    # Create the plot
+
+        if amplitude > max_amplitude:
+            max_amplitude = amplitude
+
     plt.figure(figsize=(10, 6))
     plt.plot(times, amplitudes, 'b-', label='System Amplitude')
     plt.xlabel('Time')
@@ -47,32 +54,87 @@ def plot_amplitudes(df: pd.DataFrame):
     plt.grid(True)
     plt.legend()
     os.makedirs(PLOTS_DIR, exist_ok=True)
-    plt.savefig(f"{PLOTS_DIR}/amplitudes_2.png")
+    plt.savefig(f"{PLOTS_DIR}/amplitudes_max_over_time.png")
     plt.close()
 
+    print(f"Maximum amplitude recorded: {max_amplitude:.6f}")
+
+def plot_amplitudes_comparison():
+    plt.figure(figsize=(12, 7))
+
+    for file in os.listdir(OUTPUT_DIR):
+        if file.endswith(".csv") and "Beeman" in file:
+            try:
+                w_value = extract_w(file)
+                df = pd.read_csv(
+                    os.path.join(OUTPUT_DIR, file),
+                    sep=",",
+                    header=0,
+                    skiprows=2,
+                    low_memory=False
+                )
+
+                # Rename column if needed
+                if 'y' not in df.columns and 'r' in df.columns:
+                    df.rename(columns={'r': 'y'}, inplace=True)
+
+                amplitudes = compute_amplitudes(df)
+                plt.plot(amplitudes.index, amplitudes.values, label=f"w = {w_value}")
+
+            except Exception as e:
+                print(f"Error processing {file}: {e}")
+
+    plt.xlabel("Time")
+    plt.ylabel("Amplitude")
+    plt.title("Amplitude vs Time for different w")
+    plt.grid(True)
+    plt.legend()
+    os.makedirs(PLOTS_DIR, exist_ok=True)
+    plt.savefig(f"{PLOTS_DIR}/amplitudes_comparison_w.png")
+    plt.close()
+
+def plot_steady_amplitude_vs_w(folder: str):
+    amplitudes_by_w = {}
+
+    for file in os.listdir(folder):
+        if file.endswith(".csv") and "w-" in file:
+            try:
+                w = extract_w(file)
+                df = pd.read_csv(
+                    os.path.join(folder, file),
+                    sep=",",
+                    header=0,
+                    skiprows=2,
+                    low_memory=False
+                )
+
+                if 'r' not in df.columns:
+                    continue
+
+                r = df['r']
+                max_r = r.max()
+                min_r = r.min()
+                amplitude = (max_r - min_r) / 2  # Half peak-to-peak
+                amplitudes_by_w[w] = amplitude
+
+            except Exception as e:
+                print(f"Error processing {file}: {e}")
+
+    # Sort by w
+    ws = sorted(amplitudes_by_w.keys())
+    amplitudes = [amplitudes_by_w[w] for w in ws]
+
+    # Plot
+    plt.figure(figsize=(10, 6))
+    plt.plot(ws, amplitudes, marker='o', linestyle='-', color='green')
+    plt.title('Steady Amplitude vs w')
+    plt.xlabel('w')
+    plt.ylabel('Steady Amplitude')
+    plt.grid(True)
+    os.makedirs(PLOTS_DIR, exist_ok=True)
+    plt.savefig(f'{PLOTS_DIR}/steady_amplitude_vs_w.png')
+    plt.show()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Parse Kotlin output file and generate animations and plots."
-    )
-    parser.add_argument(
-        "-f", "--output_file", type=str, required=True, help="Output file to animate"
-    )
-
-    args = parser.parse_args()
-
-    output_file = args.output_file
-
-
-    df = pd.read_csv(
-        f"./output/{output_file}",
-        sep=",",  # separator (default is comma)
-        header=0,  # use first row as header
-        index_col=None,  # don't use any column as index
-        skiprows=0,
-    )  # number of rows to skip
-
-    print(df)
-
-    # Plot the amplitudes
-    plot_amplitudes(df)
+    plot_steady_amplitude_vs_w("./output")
+    plot_amplitudes_comparison()
