@@ -29,15 +29,23 @@ class Simulation<T : SimulationSettings>(
         output.send("time,id,r,v,a\n")
 
         createLocalMathContext(34).use {
+            var iterationCount = 0
+
             while (currentTime <= settings.simulationTime) {
                 if (settings is CoupledSettings) {
                     settings.updateDrivenParticle(currentTime)
                 }
                 algorithm.advanceDeltaT()
                 currentTime += settings.deltaT
-                saveState()
+
+                if (iterationCount % 30 == 0) {
+                    saveState()
+                }
+
+                iterationCount++
             }
         }
+
 
         logger.info { "Finished simulation" }
     }
