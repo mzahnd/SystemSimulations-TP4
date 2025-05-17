@@ -1,15 +1,16 @@
 package ar.edu.itba.ss.integrables
 
 import ar.edu.itba.ss.simulation.Settings
+import ar.edu.itba.ss.simulation.SimulationSettings
 import ch.obermuhlner.math.big.DefaultBigDecimalMath.pow
 import ch.obermuhlner.math.big.kotlin.bigdecimal.div
 import ch.obermuhlner.math.big.kotlin.bigdecimal.plus
 import ch.obermuhlner.math.big.kotlin.bigdecimal.times
 import java.math.BigDecimal
 
-class GearPredictorCorrector(
-    val settings: Settings,
-    val acceleration: (settings: Settings, positions: List<BigDecimal>, velocities: List<BigDecimal>) -> List<BigDecimal>
+class GearPredictorCorrector<T : SimulationSettings>(
+    val settings: T,
+    val acceleration: (settings: T, positions: List<BigDecimal>, velocities: List<BigDecimal>) -> List<BigDecimal>
 ) : AlgorithmN {
     var _r0: List<BigDecimal>
     var _r1: List<BigDecimal>
