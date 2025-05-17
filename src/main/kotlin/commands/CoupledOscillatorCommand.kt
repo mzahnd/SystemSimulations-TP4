@@ -4,11 +4,7 @@ import ar.edu.itba.ss.integrables.*
 import ar.edu.itba.ss.simulation.*
 import ar.edu.itba.ss.utils.AlgorithmType
 import ar.edu.itba.ss.utils.OutputWriter
-import com.github.ajalt.clikt.parameters.options.check
-import com.github.ajalt.clikt.parameters.options.default
-import com.github.ajalt.clikt.parameters.options.help
-import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.types.choice
+import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.double
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.int
@@ -27,10 +23,12 @@ class CoupledOscillatorCommand : OscillatorCommand() {
         .help("N - Number of particles")
         .check("Must be greater than zero") { it > 0 }
 
-    private val angularFrequency: Double by option("-w", "--angular-frequency")
-        .double()
-        .default(1.0)
-        .help("w [rad/s]")
+    private val angularFrequencies: List<Double> by option("-w", "--angular-frequency")
+        .convert { input ->
+            input.split(",").map { it.toDouble() }
+        }
+        .default(listOf(1.0))
+        .help("w [rad/s] (Could be a list, ej: 1.0,1.5,2.0)")
 
     private val springLength: Double by option("-l", "--spring-length")
         .double()
@@ -48,16 +46,9 @@ class CoupledOscillatorCommand : OscillatorCommand() {
         logger.info { "Gamma: $gamma [kg/s]" }
         logger.info { "Final time: $finalTime [s]" }
         logger.info { "Number of particles: $numberOfParticles" }
-        logger.info { "Angular frequency: $angularFrequency [rad/s]" }
+        logger.info { "Angular frequency: ${angularFrequencies.joinToString() } [rad/s]" }
         logger.info { "Spring length: $springLength [m]" }
         logger.info { "Seed: $seed" }
-
-        val angularFrequencies = listOf(
-            1.0, 1.105, 1.211, 1.316, 1.421,
-            1.526, 1.632, 1.737, 1.842, 1.947,
-            2.053, 2.158, 2.263, 2.368, 2.474,
-            2.579, 2.684, 2.789, 2.895, 3.0
-        )
 
         runBlocking {
             val coroutineScope = this
@@ -129,7 +120,7 @@ class CoupledOscillatorCommand : OscillatorCommand() {
             .replace(" ", "-")
             .plus(".csv")
 
-    private fun buildCoupledSettings(algorithmName: String, omega: Double = angularFrequency): CoupledSettings {
+    private fun buildCoupledSettings(algorithmName: String, omega: Double): CoupledSettings {
         val basicSettings = buildBasicSettings(algorithmName, omega)
         return CoupledSettings(
             basicSettings = basicSettings,
@@ -156,7 +147,7 @@ class CoupledOscillatorCommand : OscillatorCommand() {
             seed = seed
         )
     }
-    
+
     private fun initializeCoupledAlgorithm(
         settings: CoupledSettings,
         algorithm: AlgorithmN,

@@ -9,7 +9,14 @@ simulation_time=15
 mass=0.00021
 spring_constant=102.3
 gamma=0.0003
-angular_frequency=8
+
+# Define the array of angular frequencies
+angular_frequencies=(
+  1.0
+)
+
+# Join frequencies with commas
+frequencies_str=$(IFS=,; echo "${angular_frequencies[*]}")
 
 # Clear the terminal
 clear
@@ -17,7 +24,7 @@ clear
 # Build the project
 gradle clean build
 
-# Run the simulation
+# Run the simulation with all frequencies
 gradle run --no-build-cache --rerun-tasks --args="\
   coupled-oscillator \
   -m $mass \
@@ -26,6 +33,6 @@ gradle run --no-build-cache --rerun-tasks --args="\
   -A $amplitude \
   -t $simulation_time \
   -dt $deltaT \
-  -w $angular_frequency \
+  -w $frequencies_str \
   --output-directory $output_directory \
   -s $seed"
