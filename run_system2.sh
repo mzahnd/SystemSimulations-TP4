@@ -12,7 +12,8 @@ gamma=0.0003
 
 # Define the array of angular frequencies
 angular_frequencies=(
-  1.0
+  1.737 1.842 1.947
+  2.053 2.158 2.263
 )
 
 # Join frequencies with commas
@@ -35,4 +36,5 @@ gradle run --no-build-cache --rerun-tasks --args="\
   -dt $deltaT \
   -w $frequencies_str \
   --output-directory $output_directory \
-  -s $seed"
+  -s $seed \
+  --sweep-k"

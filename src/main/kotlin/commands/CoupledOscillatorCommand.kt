@@ -39,6 +39,10 @@ class CoupledOscillatorCommand : OscillatorCommand() {
         .enum<AlgorithmType> { it.name.lowercase() }
         .default(AlgorithmType.BEEMAN)
 
+    private val sweepK: Boolean by option("--sweep-k")
+        .flag(default = false)
+        .help("If set, vary spring constant k in log-scale from 1e2 to 1e4")
+
     override fun run() {
         logger.info { "Starting simulation with the following parameters:" }
         logger.info { "Particle mass: $mass [kg]" }
@@ -48,31 +52,43 @@ class CoupledOscillatorCommand : OscillatorCommand() {
         logger.info { "Number of particles: $numberOfParticles" }
         logger.info { "Angular frequency: ${angularFrequencies.joinToString() } [rad/s]" }
         logger.info { "Spring length: $springLength [m]" }
+        logger.info { "Sweep K: $sweepK" }
         logger.info { "Seed: $seed" }
+
+        val kValues = if (sweepK) generateKValues() else listOf(springConstant)
 
         runBlocking {
             val coroutineScope = this
 
-            val simulationJobs = angularFrequencies.map { omega ->
-                launch {
-                    val job = initializeWithFrequency(
-                        scope = coroutineScope,
-                        omega = omega,
-                        algorithmName = algorithmType.prettyName,
-                        algorithmFactory = ::algorithmFactory
-                    )
-                    job.jobParams.simulationJob.join()
-                    job.jobParams.writer.requestStop()
-                    job.jobParams.writerJob.join()
-                    job.jobParams.output.close()
+            kValues.forEach { k ->
+                logger.info { "Running simulations for k = $k" }
+                val simulationJobs = angularFrequencies.map { omega ->
+                    launch {
+                        val job = initializeWithFrequency(
+                            scope = coroutineScope,
+                            omega = omega,
+                            springConstant = k,
+                            algorithmName = algorithmType.prettyName,
+                            algorithmFactory = ::algorithmFactory
+                        )
+                        job.jobParams.simulationJob.join()
+                        job.jobParams.writer.requestStop()
+                        job.jobParams.writerJob.join()
+                        job.jobParams.output.close()
 
-                    logger.info { "Simulation with w=$omega completed. Output: ${job.settings.basicSettings.outputFile}" }
+                        logger.info { "Simulation with k=$k, w=$omega completed. Output: ${job.settings.basicSettings.outputFile}" }
+                    }
                 }
+
+                simulationJobs.joinAll()
             }
 
-            simulationJobs.joinAll()
             logger.info { "All simulations completed." }
         }
+    }
+
+    private fun generateKValues(): List<Double> {
+        return listOf(1e2, 1e3, 1.8e3, 3.2e3, 1e4)
     }
 
     private fun algorithmFactory(settings: CoupledSettings): AlgorithmN {
@@ -91,10 +107,11 @@ class CoupledOscillatorCommand : OscillatorCommand() {
     private fun initializeWithFrequency(
         scope: CoroutineScope,
         omega: Double,
+        springConstant: Double,
         algorithmName: String,
         algorithmFactory: (CoupledSettings) -> AlgorithmN
     ): CoupledSimulationJob {
-        val settings = buildCoupledSettings(algorithmName, omega)
+        val settings = buildCoupledSettings(algorithmName, omega, springConstant)
         return initializeCoupledAlgorithm(
             settings = settings,
             algorithm = algorithmFactory(settings),
@@ -102,7 +119,7 @@ class CoupledOscillatorCommand : OscillatorCommand() {
         )
     }
 
-    private fun buildCoupledFileName(algorithmName: String, omega: Double): String =
+    private fun buildCoupledFileName(algorithmName: String, omega: Double, springConstant: Double): String =
         buildString {
             append(algorithmName)
             append("_N=$numberOfParticles")
@@ -120,8 +137,8 @@ class CoupledOscillatorCommand : OscillatorCommand() {
             .replace(" ", "-")
             .plus(".csv")
 
-    private fun buildCoupledSettings(algorithmName: String, omega: Double): CoupledSettings {
-        val basicSettings = buildBasicSettings(algorithmName, omega)
+    private fun buildCoupledSettings(algorithmName: String, omega: Double, springConstant: Double): CoupledSettings {
+        val basicSettings = buildBasicSettings(algorithmName, omega, springConstant)
         return CoupledSettings(
             basicSettings = basicSettings,
             numberOfParticles = numberOfParticles - 1,
@@ -130,8 +147,8 @@ class CoupledOscillatorCommand : OscillatorCommand() {
         )
     }
 
-    private fun buildBasicSettings(algorithmName: String, omega: Double): Settings {
-        val fileName = buildCoupledFileName(algorithmName, omega)
+    private fun buildBasicSettings(algorithmName: String, omega: Double, springConstant: Double): Settings {
+        val fileName = buildCoupledFileName(algorithmName, omega, springConstant)
         val outputCsv = outputDirectory.resolve(fileName).toFile()
         return Settings(
             outputFile = outputCsv,
