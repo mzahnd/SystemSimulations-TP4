@@ -26,7 +26,7 @@ class Simulation<T : SimulationSettings>(
         output.send(buildParametersLine())
 
         // Header
-        output.send("time,id,r,v,a\n")
+        output.send("time,id,r,v\n")
 
         createLocalMathContext(34).use {
             var iterationCount = 0
@@ -91,9 +91,8 @@ class Simulation<T : SimulationSettings>(
                 listOf(
                     currentTime.toPlainString(),
                     "0", // Particle ID
-                    settings.drivenDerivatives[0].toPlainString(),
-                    settings.drivenDerivatives[1].toPlainString(),
-                    settings.drivenDerivatives[2].toPlainString(),
+                    "%.36f".format(settings.drivenDerivatives[0]),
+                    "%.36f".format(settings.drivenDerivatives[1])
                 ).joinToString(separator = ",", postfix = "\n")
             )
         }
@@ -103,9 +102,8 @@ class Simulation<T : SimulationSettings>(
                 listOf(
                     currentTime.toPlainString(),
                     index.inc().toString(), // Particle ID
-                    position.toPlainString(),
-                    algorithm.currentVelocities[index].toPlainString(),
-                    algorithm.currentAccelerations[index].toPlainString(),
+                    "%.36f".format(position),
+                    "%.36f".format(algorithm.currentVelocities[index])
                 ).joinToString(separator = ",", postfix = "\n")
             )
         }
