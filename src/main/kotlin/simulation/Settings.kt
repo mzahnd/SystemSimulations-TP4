@@ -49,14 +49,21 @@ data class CoupledSettings(
         get() = basicSettings.initialVelocities.take(numberOfParticles)
 
     // Track current driven particle state
-    var currentDrivenPosition: BigDecimal = BigDecimal.ZERO
-    var currentDrivenVelocity: BigDecimal = BigDecimal.ZERO
+    val drivenDerivatives: Array<BigDecimal> = Array(6) { BigDecimal.ZERO }
 
     fun updateDrivenParticle(time: BigDecimal) {
-        currentDrivenPosition = basicSettings.amplitude.toBigDecimal() *
-                sin(angularFrequency.toBigDecimal() * time)
-        currentDrivenVelocity = angularFrequency.toBigDecimal() *
-                basicSettings.amplitude.toBigDecimal() *
-                cos(angularFrequency.toBigDecimal() * time)
+        val A = basicSettings.amplitude.toBigDecimal()
+        val w = angularFrequency.toBigDecimal()
+        val wt = w * time
+
+        val sinWt = sin(wt)
+        val cosWt = cos(wt)
+
+        drivenDerivatives[0] = A * sinWt                       // position
+        drivenDerivatives[1] = A * w * cosWt                   // velocity
+        drivenDerivatives[2] = -A * w.pow(2) * sinWt         // acceleration
+        drivenDerivatives[3] = -A * w.pow(3) * cosWt         // jerk
+        drivenDerivatives[4] = A * w.pow(4) * sinWt          // snap
+        drivenDerivatives[5] = A * w.pow(5) * cosWt          // crackle
     }
 }

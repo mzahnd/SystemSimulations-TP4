@@ -91,9 +91,9 @@ class Simulation<T : SimulationSettings>(
                 listOf(
                     currentTime.toPlainString(),
                     "0", // Particle ID
-                    settings.currentDrivenPosition.toPlainString(),
-                    settings.currentDrivenVelocity.toPlainString(),
-                    "0" // Acceleration is 0 for driven particle
+                    settings.drivenDerivatives[0].toPlainString(),
+                    settings.drivenDerivatives[1].toPlainString(),
+                    settings.drivenDerivatives[2].toPlainString(),
                 ).joinToString(separator = ",", postfix = "\n")
             )
         }
@@ -149,7 +149,7 @@ class Simulation<T : SimulationSettings>(
             return currentPositions.indices.map { i ->
                 // Left neighbor is either driven particle or previous integrated particle
                 val leftNeighbor = when (i) {
-                    0 -> settings.currentDrivenPosition  // First integrated particle connects to driven
+                    0 -> settings.drivenDerivatives[0]  // First integrated particle connects to driven
                     else -> currentPositions[i-1]
                 }
 

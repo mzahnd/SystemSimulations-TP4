@@ -1,5 +1,6 @@
 package ar.edu.itba.ss.integrables
 
+import ar.edu.itba.ss.simulation.CoupledSettings
 import ar.edu.itba.ss.simulation.Settings
 import ar.edu.itba.ss.simulation.SimulationSettings
 import ch.obermuhlner.math.big.DefaultBigDecimalMath.pow
@@ -39,14 +40,38 @@ class GearPredictorCorrector<T : SimulationSettings>(
     init {
         _r0 = settings.initialPositions
         _r1 = settings.initialVelocities
-        _r2 = _r0.indices.map { i -> -(kOverM * _r0[i] + gOverM * _r1[i]) }
-        _r3 = _r1.indices.map { i -> -(kOverM * _r1[i] + gOverM * _r2[i]) }
-        _r4 = _r2.indices.map { i -> -(kOverM * _r2[i] + gOverM * _r3[i]) }
-        _r5 = _r3.indices.map { i -> -(kOverM * _r3[i] + gOverM * _r4[i]) }
+
+        if (settings is CoupledSettings) {
+            _r2 = generateNextDerivative(settings, _r0, _r1, 2)
+            _r3 = generateNextDerivative(settings, _r1, _r2, 3)
+            _r4 = generateNextDerivative(settings, _r2, _r3, 4)
+            _r5 = generateNextDerivative(settings, _r3, _r4, 5)
+        } else {
+            _r2 = _r0.indices.map { i -> -(kOverM * _r0[i] + gOverM * _r1[i]) }
+            _r3 = _r1.indices.map { i -> -(kOverM * _r1[i] + gOverM * _r2[i]) }
+            _r4 = _r2.indices.map { i -> -(kOverM * _r2[i] + gOverM * _r3[i]) }
+            _r5 = _r3.indices.map { i -> -(kOverM * _r3[i] + gOverM * _r4[i]) }
+        }
 
         currentPositions = _r0
         currentVelocities = _r1
         currentAccelerations = _r2
+    }
+
+    private fun generateNextDerivative(
+        settings: CoupledSettings,
+        positions: List<BigDecimal>,
+        velocities: List<BigDecimal>,
+        derivativeOrder: Int
+    ): List<BigDecimal> {
+        val n = positions.size
+        return List(n) { i ->
+            val left = if (i == 0) settings.drivenDerivatives[derivativeOrder] else positions[i - 1]
+            val right = if (i == n - 1) BigDecimal.ZERO else positions[i + 1]
+            val springForce = -kOverM * (positions[i] * 2.toBigDecimal() - left - right)
+            val dampingForce = -gOverM * velocities[i]
+            springForce + dampingForce
+        }
     }
 
     override fun advanceDeltaT() {
