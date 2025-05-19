@@ -8,6 +8,15 @@ import argparse
 from typing import Union
 import logging
 
+plt.rcParams.update({
+    'font.size': 20,
+    'axes.titlesize': 22,
+    'axes.labelsize': 22,
+    'xtick.labelsize': 20,
+    'ytick.labelsize': 20,
+    'legend.fontsize': 20
+})
+
 parser = argparse.ArgumentParser(
     description="Parse Kotlin output file and generate animations and plots."
 )
@@ -32,9 +41,6 @@ df = pd.read_csv(
     skiprows=2,
 )  # number of rows to skip
 
-# Filter by time to get less rows to animate
-df = df[(df["time"] * 1000).astype(int) % 50 == 0]
-
 # Set Time as index
 df.set_index("time", inplace=True)
 
@@ -49,12 +55,13 @@ TOTAL_DURATION = 12  # seconds
 interval = (TOTAL_DURATION * 1000) / len(times)  # convert to milliseconds
 
 # Create figure and axis
-fig, ax = plt.subplots(figsize=(10, 10))
+fig, ax = plt.subplots(figsize=(12, 10))
+fig.subplots_adjust(left=0.15)
 ax.set_xlim(-0.1, BOARD_LEN + 0.1)
 ax.set_ylim(-1.1e-2, 1.1e-2)
-ax.set_xlabel("X Position")
-ax.set_ylabel("Y Position")
-ax.set_title("Particle System Animation")
+ax.set_xlabel("X Position [m]")
+ax.set_ylabel("Y Position [m]")
+
 
 # Initialize list to store circle patches
 circles = []
@@ -93,7 +100,7 @@ def update(frame):
         circles.append(circle)
 
     # Update title with current time
-    ax.set_title(f"Particle System Animation - Time: {current_time:.2f}")
+    ax.set_title(f"Time: {current_time:.2f}")
 
     return circles
 
