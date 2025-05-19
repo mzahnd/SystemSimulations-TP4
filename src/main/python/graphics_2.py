@@ -194,7 +194,7 @@ def plot_steady_amplitude_vs_w_and_k(folder: str):
         amplitudes = [amplitudes_by_w_and_k[k][w] for w in ws]
         plt.plot(ws, amplitudes, marker='o', linestyle='-', color=color, label=f'k = {k:.2f}')
 
-    plt.xlabel('w [rad/s]')
+    plt.xlabel(r'$\omega$ [rad/s]')
     plt.ylabel('Max amplitude [m]')
     plt.grid(True)
     plt.legend(loc='upper left')
