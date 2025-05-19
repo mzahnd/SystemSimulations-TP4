@@ -26,6 +26,7 @@ CUSTOM_PALETTE = [
     "#8050be",  # violet
     "#cf1f51",  # magenta
 ]
+BLACK = "#1a1a1a"
 GREY = "#6f6f6f"
 LIGHT_GREY = "#bfbfbf"
 
@@ -35,20 +36,26 @@ PLT_THEME = {
     "axes.spines.right": False,
     "axes.spines.left": True,
     "axes.spines.bottom": True,
-    "axes.edgecolor": LIGHT_GREY,
+    "axes.edgecolor": BLACK,
     "axes.titleweight": "normal",  # Optional: ensure title weight is normal (not bold)
     "axes.titlelocation": "center",  # Center the title by default
     "axes.titlecolor": GREY,  # Set title color
     "axes.labelcolor": GREY,  # Set labels color
     "axes.labelpad": 12,
-    "axes.titlesize": 10,
     "xtick.bottom": False,  # Remove ticks on the X axis
-    "ytick.labelcolor": GREY,  # Set Y ticks color
+    "xtick.labelcolor": BLACK,  # Set Y ticks color
+    "ytick.labelcolor": BLACK,  # Set Y ticks color
     "ytick.color": GREY,  # Set Y label color
     "savefig.dpi": 128,
     "legend.frameon": False,
     "legend.labelcolor": GREY,
     "figure.titlesize": 16,  # Set suptitle size
+    "font.size": 20,
+    "axes.titlesize": 22,
+    "axes.labelsize": 22,
+    "xtick.labelsize": 20,
+    "ytick.labelsize": 20,
+    "legend.fontsize": 20,
 }
 plt.style.use(PLT_THEME)
 sns.set_palette(CUSTOM_PALETTE)
@@ -115,6 +122,7 @@ def y_fmt(x, pos):
     """Format number as power of 10"""
     return format_power_of_10(x)
 
+
 # Coseno con Decimal usando serie de Taylor
 def cos_decimal(x: Decimal, terms: int = 30) -> Decimal:
     x = x % (2 * Decimal("3.141592653589793238462643383279"))
@@ -129,11 +137,13 @@ def cos_decimal(x: Decimal, terms: int = 30) -> Decimal:
         sign *= -1
     return result
 
+
 # Raíz cuadrada para Decimal
 def sqrt_decimal(x: Decimal) -> Decimal:
     with localcontext() as ctx:
         ctx.prec += 10
         return x.sqrt()
+
 
 def read_csv(filepath: str) -> Output:
     config_df = pd.read_csv(filepath, nrows=1, header=0, keep_default_na=False)
@@ -160,8 +170,7 @@ def read_csv(filepath: str) -> Output:
         dt = 0.0
 
     values = [
-        Instant(t=row.time, r=row.r, v=row.v)
-        for row in df.itertuples(index=False)
+        Instant(t=row.time, r=row.r, v=row.v) for row in df.itertuples(index=False)
     ]
 
     return Output(params=config, values=values, dt=dt)
@@ -186,9 +195,9 @@ def calculate_oscilator(simulation_output: Output):
         return amplitude * exp_part * cos_part
 
     return [
-        Instant(t=out.t, r=float(r_t(out.t)), v=0.0)
-        for out in simulation_output.values
+        Instant(t=out.t, r=float(r_t(out.t)), v=0.0) for out in simulation_output.values
     ]
+
 
 def calculate_mse(output: Output) -> float:
     analytic_vals = calculate_oscilator(output)
@@ -202,8 +211,8 @@ def calculate_mse(output: Output) -> float:
 
 
 def plot_mse_by_dt(outputs_by_method: Dict[str, List[Output]], output_dir: str):
-    Y_MIN_EXP = -35  # lower exponent     ⟵ change here if needed
-    Y_MAX_EXP = -5  # upper exponent     ⟵ change here if needed
+    Y_MIN_EXP = -35  # lower exponent
+    Y_MAX_EXP = -2  # upper exponent
     Y_MIN = 10**Y_MIN_EXP
     Y_MAX = 10**Y_MAX_EXP
     plt.figure(figsize=FIGSIZE)
@@ -326,7 +335,7 @@ def main(
                 for path in paths
             ]
 
-    process_paths("Euler", euler_paths)
+    # process_paths("Euler", euler_paths)  # Do not print Euler
     process_paths("Verlet", verlet_paths)
     process_paths("Beeman", beeman_paths)
     process_paths("GPC", gpc_paths)
