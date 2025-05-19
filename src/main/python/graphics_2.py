@@ -127,7 +127,7 @@ def plot_steady_amplitude_vs_w(folder: str):
     plt.figure(figsize=(10, 6))
     plt.plot(ws, amplitudes, marker='o', linestyle='-', color='green')
     plt.xlabel('w [rad/s]')
-    plt.ylabel('Steady Amplitude [m]')
+    plt.ylabel('Max amplitude [m]')
     plt.grid(True)
     os.makedirs(PLOTS_DIR, exist_ok=True)
     plt.savefig(f'{PLOTS_DIR}/steady_amplitude_vs_w.png')
