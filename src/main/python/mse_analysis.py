@@ -40,22 +40,23 @@ PLT_THEME = {
     "axes.titleweight": "normal",  # Optional: ensure title weight is normal (not bold)
     "axes.titlelocation": "center",  # Center the title by default
     "axes.titlecolor": GREY,  # Set title color
-    "axes.labelcolor": GREY,  # Set labels color
+    "axes.labelcolor": BLACK,  # Set labels color
     "axes.labelpad": 12,
     "xtick.bottom": False,  # Remove ticks on the X axis
     "xtick.labelcolor": BLACK,  # Set Y ticks color
+    "xtick.color": GREY,  # Set Y label color
     "ytick.labelcolor": BLACK,  # Set Y ticks color
     "ytick.color": GREY,  # Set Y label color
     "savefig.dpi": 128,
     "legend.frameon": False,
-    "legend.labelcolor": GREY,
+    "legend.labelcolor": BLACK,
     "figure.titlesize": 16,  # Set suptitle size
-    "font.size": 20,
-    "axes.titlesize": 22,
-    "axes.labelsize": 22,
-    "xtick.labelsize": 20,
-    "ytick.labelsize": 20,
-    "legend.fontsize": 20,
+    "font.size": 22,
+    "axes.titlesize": 24,
+    "axes.labelsize": 24,
+    "xtick.labelsize": 22,
+    "ytick.labelsize": 22,
+    "legend.fontsize": 22,
 }
 plt.style.use(PLT_THEME)
 sns.set_palette(CUSTOM_PALETTE)
@@ -241,8 +242,8 @@ def plot_mse_by_dt(outputs_by_method: Dict[str, List[Output]], output_dir: str):
         hue="Method",
         marker="o",
         style="Method",
-        markersize=8,
-        linewidth=2,
+        markersize=10,
+        linewidth=4,
     )
 
     # ── Y axis: logarithmic and nicely formatted ───────────────────
@@ -259,10 +260,10 @@ def plot_mse_by_dt(outputs_by_method: Dict[str, List[Output]], output_dir: str):
     ax.get_xaxis().set_major_formatter(FuncFormatter(_pow10_fmt))
 
     # ── labels, grid, legend ───────────────────────────────────────
-    plt.xlabel("Time step (dt) [s]")
+    plt.xlabel(r"$\Delta t$ (s)")
     plt.ylabel("Mean Squared Error (MSE)")
     plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.6)
-    plt.legend(title="Method")
+    plt.legend()
     plt.tight_layout()
 
     # ── save figure ────────────────────────────────────────────────
