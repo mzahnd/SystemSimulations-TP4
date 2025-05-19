@@ -166,8 +166,8 @@ def plot_algorithms(outputs: dict[str, Output], output_dir: str, zoom: bool = Fa
         linestyle="--",
     )
 
-    plt.xlabel("Tiempo (s)")
-    plt.ylabel("Posición (m)")
+    plt.xlabel("Time (s)")
+    plt.ylabel("Axis Y (m)")
     plt.grid(True)
 
     if zoom:

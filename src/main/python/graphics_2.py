@@ -84,9 +84,8 @@ def plot_amplitudes_comparison():
             except Exception as e:
                 print(f"Error processing {file}: {e}")
 
-    plt.xlabel("Time")
-    plt.ylabel("Amplitude")
-    plt.title("Amplitude vs Time for different w")
+    plt.xlabel("Time [s]")
+    plt.ylabel("Amplitude [m]")
     plt.grid(True)
     plt.legend()
     os.makedirs(PLOTS_DIR, exist_ok=True)
@@ -127,9 +126,8 @@ def plot_steady_amplitude_vs_w(folder: str):
     # Plot
     plt.figure(figsize=(10, 6))
     plt.plot(ws, amplitudes, marker='o', linestyle='-', color='green')
-    plt.title('Steady Amplitude vs w')
-    plt.xlabel('w')
-    plt.ylabel('Steady Amplitude')
+    plt.xlabel('w [rad/s]')
+    plt.ylabel('Steady Amplitude [m]')
     plt.grid(True)
     os.makedirs(PLOTS_DIR, exist_ok=True)
     plt.savefig(f'{PLOTS_DIR}/steady_amplitude_vs_w.png')

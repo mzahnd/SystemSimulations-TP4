@@ -34,9 +34,8 @@ def plot_amplitudes(df: pd.DataFrame):
 
     plt.figure(figsize=(10, 6))
     plt.plot(times, amplitudes, 'b-', label='System amplitude')
-    plt.xlabel('Time')
-    plt.ylabel('Amplitude')
-    plt.title('System amplitude along the time')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Amplitude [m]')
     plt.grid(True)
     plt.legend()
     os.makedirs(PLOTS_DIR, exist_ok=True)

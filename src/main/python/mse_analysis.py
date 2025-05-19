@@ -76,7 +76,6 @@ class Instant:
     t: float
     r: float
     v: float
-    a: float
 
 
 @dataclass
@@ -161,7 +160,7 @@ def read_csv(filepath: str) -> Output:
         dt = 0.0
 
     values = [
-        Instant(t=row.time, r=row.r, v=row.v, a=row.a)
+        Instant(t=row.time, r=row.r, v=row.v)
         for row in df.itertuples(index=False)
     ]
 
@@ -187,7 +186,7 @@ def calculate_oscilator(simulation_output: Output):
         return amplitude * exp_part * cos_part
 
     return [
-        Instant(t=out.t, r=float(r_t(out.t)), v=0.0, a=0.0)
+        Instant(t=out.t, r=float(r_t(out.t)), v=0.0)
         for out in simulation_output.values
     ]
 
@@ -251,10 +250,10 @@ def plot_mse_by_dt(outputs_by_method: Dict[str, List[Output]], output_dir: str):
     ax.get_xaxis().set_major_formatter(FuncFormatter(_pow10_fmt))
 
     # ── labels, grid, legend ───────────────────────────────────────
-    plt.xlabel("Paso de tiempo (dt)")
-    plt.ylabel("Error Cuadrático Medio (MSE)")
+    plt.xlabel("Time step (dt) [s]")
+    plt.ylabel("Mean Squared Error (MSE)")
     plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.6)
-    plt.legend(title="Método")
+    plt.legend(title="Method")
     plt.tight_layout()
 
     # ── save figure ────────────────────────────────────────────────
@@ -290,14 +289,14 @@ def plot_mse_by_dt_2(outputs_by_method: Dict[str, List[Output]], output_dir: str
         linewidth=2,
     )
 
-    plt.xlabel("Paso de tiempo (dt)")
-    plt.ylabel("Error Cuadrático Medio (MSE)")
+    plt.xlabel("Time step (dt) [s]")
+    plt.ylabel("Mean Squared Error (MSE)")
     plt.grid(True)
 
     unique_dts = sorted(df["dt"].unique())
     plt.xticks(unique_dts)
 
-    plt.legend(title="Método")
+    plt.legend(title="Method")
     plt.tight_layout()
 
     output_path = os.path.join(output_dir, "mse_vs_dt.png")
