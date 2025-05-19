@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import re
+import scipy.optimize
+import matplotlib.ticker as mticker
 
 PARTICLE_RADIUS = 0.0005
 BOARD_LEN = 1
@@ -141,6 +143,7 @@ def plot_steady_amplitude_vs_w(folder: str):
 
 def plot_steady_amplitude_vs_w_and_k(folder: str):
     amplitudes_by_w_and_k = {}
+    max_amplitudes = {}  # Store max amplitude and corresponding w for each k
 
     for file in os.listdir(folder):
         if file.endswith(".csv") and "w-" in file:
@@ -167,6 +170,10 @@ def plot_steady_amplitude_vs_w_and_k(folder: str):
                     amplitudes_by_w_and_k[k] = {}
                 amplitudes_by_w_and_k[k][w] = amplitude
 
+                # Update max amplitude for this k if needed
+                if k not in max_amplitudes or amplitude > max_amplitudes[k][1]:
+                    max_amplitudes[k] = (w, amplitude)
+
             except Exception as e:
                 print(f"Error processing {file}: {e}")
 
@@ -185,17 +192,51 @@ def plot_steady_amplitude_vs_w_and_k(folder: str):
         'ytick.labelsize': 20,
         'legend.fontsize': 20
     })
-    
+
     # Use a colormap for different k values
     colors = plt.cm.viridis(np.linspace(0, 1, len(ks)))
     
+    yticks = []
     for k, color in zip(ks, colors):
         ws = sorted(amplitudes_by_w_and_k[k].keys())
         amplitudes = [amplitudes_by_w_and_k[k][w] for w in ws]
-        plt.plot(ws, amplitudes, marker='o', linestyle='-', color=color, label=f'k = {k:.2f}')
+        w0s = np.array([max_amplitudes[k][0] for k in ks])  # w values that give max amplitude
+        amax = np.array([max_amplitudes[k][1] for k in ks])
+        plt.plot(ws, amplitudes, linestyle='-', marker='o', color=color)
+        plt.scatter(w0s, amax, color='red', s=120, marker='*', zorder=10)
+        plt.xticks(ws, [f"{w:.2f}" for w in ws], rotation=45)
+
+    # Overlay the (k, w0) points as red stars
+    """
+    # Compute (k, w0) points (where w0 is the frequency that gives max amplitude for each k)
+    ws_list = []
+    a_max_list = []
+    for (w, amplitude) in max_amplitudes.values():
+        ws_list.append(w)
+        a_max_list.append(amplitude)
+
+    # Overlay the (k, w0) points as red stars
+    plt.scatter(ws_list, a_max_list, color='red', s=120, marker='*', label=r'$(k,\,A_{max})$ (max amplitude)', zorder=10)
+
+    # Annotate each red star with its value in scientific notation (LaTeX, superscript)
+    yticks = []
+    for x, y in zip(ws_list, a_max_list):
+        exponent = int(np.floor(np.log10(abs(y)))) if y != 0 else 0
+        coeff = y / 10**exponent if y != 0 else 0
+        label = fr'${coeff:.2f} \times 10^{{{exponent}}}$'
+        yticks.append(label)
+
+    ax = plt.gca()
+    formatter = mticker.ScalarFormatter(useMathText=True)
+    formatter.set_scientific(True)
+    formatter.set_powerlimits((-2, 2))
+    ax.yaxis.set_major_formatter(formatter)
+    plt.yticks(a_max_list, yticks)
+    plt.xticks(ws_list, [f"{w:.2f}" for w in ws_list], rotation=30)
+    """
 
     plt.xlabel(r'$\omega$ [rad/s]')
-    plt.ylabel('Max amplitude [m]')
+    plt.ylabel(r'$A_{max}$ [m]')
     plt.grid(True)
     plt.legend(loc='upper left')
     plt.tight_layout()
@@ -241,14 +282,14 @@ def plot_w0_vs_k(folder: str):
                 print(f"Error processing {file}: {e}")
 
     # Sort by k
-    ks = sorted(max_amplitudes.keys())
-    w0s = [max_amplitudes[k][0] for k in ks]  # w values that give max amplitude
-    amplitudes = [max_amplitudes[k][1] for k in ks]  # max amplitudes
+    ks = np.array(sorted(max_amplitudes.keys()))
+    w0s = np.array([max_amplitudes[k][0] for k in ks])  # w values that give max amplitude
 
-    # Calculate linear regression
-    slope, intercept = np.polyfit(ks, w0s, 1)
-    regression_line = np.poly1d([slope, intercept])
-    r_squared = np.corrcoef(ks, w0s)[0, 1]**2
+    # Fit to w0 = a * sqrt(k)
+    def sqrt_law(k, a):
+        return a * np.sqrt(k)
+    popt, pcov = scipy.optimize.curve_fit(sqrt_law, ks, w0s)
+    a_fit = popt[0]
 
     # Create plot
     plt.figure(figsize=(12, 7))
@@ -263,22 +304,42 @@ def plot_w0_vs_k(folder: str):
         'legend.fontsize': 20
     })
     
-    # Plot data points and regression line
-    plt.plot(ks, w0s, 'bo-', linewidth=2, markersize=8, label='Data points')
-    plt.plot(ks, regression_line(ks), 'r--', linewidth=2, 
-             label=f'Linear fit: y = {slope:.3f}x + {intercept:.3f}\nR² = {r_squared:.3f}')
+    # Plot data points
+    plt.plot(
+        ks, w0s,
+        marker='o', linestyle='',
+        color='royalblue',
+        markersize=10,
+        markeredgecolor='black',
+        zorder=10
+    )
+    # Plot the smooth fit curve
+    k_dense = np.linspace(ks.min(), ks.max(), 300)
+    w0s_fit_dense = sqrt_law(k_dense, a_fit)
+    plt.plot(
+        k_dense, w0s_fit_dense,
+        color='orange',
+        linewidth=4,
+        linestyle='-',
+        label=fr'Fit: $a\ \sqrt{{k}}$, $a$={a_fit:.3f}'
+    )
     
     plt.xlabel('k [N/m]')
     plt.ylabel(r'$\omega_0$ [rad/s]')
-    plt.grid(True)
+    plt.xscale('linear')
+    plt.grid(True, which='both', ls='--')
     plt.legend()
     plt.tight_layout()
+    
+    # Set x-ticks to the ks values
+    plt.xticks(ks, [f"{k:.2f}" for k in ks], rotation=30)
+
     
     os.makedirs(PLOTS_DIR, exist_ok=True)
     plt.savefig(f'{PLOTS_DIR}/w0_vs_k.png', bbox_inches='tight', dpi=300)
     plt.show()
 
 if __name__ == "__main__":
-    #plot_steady_amplitude_vs_w_and_k("./output")
-    plot_w0_vs_k("./output")
+    plot_steady_amplitude_vs_w_and_k("./output")
+    #plot_w0_vs_k("./output")
     #plot_amplitudes_comparison()

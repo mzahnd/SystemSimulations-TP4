@@ -9,6 +9,7 @@ pandas = "*"
 tqdm = "*"
 numpy = "*"
 seaborn = "*"
+scipy = "*"
 
 [dev-packages]
 
