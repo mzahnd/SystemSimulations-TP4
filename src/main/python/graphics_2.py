@@ -245,6 +245,11 @@ def plot_w0_vs_k(folder: str):
     w0s = [max_amplitudes[k][0] for k in ks]  # w values that give max amplitude
     amplitudes = [max_amplitudes[k][1] for k in ks]  # max amplitudes
 
+    # Calculate linear regression
+    slope, intercept = np.polyfit(ks, w0s, 1)
+    regression_line = np.poly1d([slope, intercept])
+    r_squared = np.corrcoef(ks, w0s)[0, 1]**2
+
     # Create plot
     plt.figure(figsize=(12, 7))
     
@@ -258,11 +263,15 @@ def plot_w0_vs_k(folder: str):
         'legend.fontsize': 20
     })
     
-    # Plot w0 vs k
-    plt.plot(ks, w0s, 'bo-', linewidth=2, markersize=8)
+    # Plot data points and regression line
+    plt.plot(ks, w0s, 'bo-', linewidth=2, markersize=8, label='Data points')
+    plt.plot(ks, regression_line(ks), 'r--', linewidth=2, 
+             label=f'Linear fit: y = {slope:.3f}x + {intercept:.3f}\nR² = {r_squared:.3f}')
+    
     plt.xlabel('k [N/m]')
     plt.ylabel(r'$\omega_0$ [rad/s]')
     plt.grid(True)
+    plt.legend()
     plt.tight_layout()
     
     os.makedirs(PLOTS_DIR, exist_ok=True)
