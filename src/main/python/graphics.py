@@ -23,6 +23,7 @@ CUSTOM_PALETTE = [
     "#8050be",  # violet
     "#cf1f51",  # magenta
 ]
+BLACK = "#1a1a1a"
 GREY = "#6f6f6f"
 LIGHT_GREY = "#bfbfbf"
 
@@ -32,20 +33,26 @@ PLT_THEME = {
     "axes.spines.right": False,
     "axes.spines.left": True,
     "axes.spines.bottom": True,
-    "axes.edgecolor": LIGHT_GREY,
+    "axes.edgecolor": BLACK,
     "axes.titleweight": "normal",  # Optional: ensure title weight is normal (not bold)
     "axes.titlelocation": "center",  # Center the title by default
     "axes.titlecolor": GREY,  # Set title color
     "axes.labelcolor": GREY,  # Set labels color
     "axes.labelpad": 12,
-    "axes.titlesize": 10,
     "xtick.bottom": False,  # Remove ticks on the X axis
-    "ytick.labelcolor": GREY,  # Set Y ticks color
+    "xtick.labelcolor": BLACK,  # Set Y ticks color
+    "ytick.labelcolor": BLACK,  # Set Y ticks color
     "ytick.color": GREY,  # Set Y label color
     "savefig.dpi": 128,
     "legend.frameon": False,
     "legend.labelcolor": GREY,
     "figure.titlesize": 16,  # Set suptitle size
+    "font.size": 20,
+    "axes.titlesize": 22,
+    "axes.labelsize": 22,
+    "xtick.labelsize": 20,
+    "ytick.labelsize": 20,
+    "legend.fontsize": 20,
 }
 plt.style.use(PLT_THEME)
 sns.set_palette(CUSTOM_PALETTE)
@@ -217,7 +224,7 @@ def read_csv(filepath: str):
     )
     df = df.sort_values("time")
     values = [
-        Instant(t=row.time, r=row.r, v=row.v, a=row.a)
+        Instant(t=row.time, r=row.r, v=row.v, a=0.0)
         for row in df.itertuples(index=False)
     ]
 
@@ -248,12 +255,13 @@ def main(
     os.makedirs(output_base_dir, exist_ok=True)
 
     outputs: dict[str, Output] = {}
-    if euler_path:
-        outputs["Euler"] = read_csv(
-            euler_path
-            if os.path.isabs(euler_path)
-            else os.path.join(input_dir, euler_path)
-        )
+    # Do not print Euler
+    # if euler_path:
+    #     outputs["Euler"] = read_csv(
+    #         euler_path
+    #         if os.path.isabs(euler_path)
+    #         else os.path.join(input_dir, euler_path)
+    #     )
     if verlet_path:
         outputs["Verlet"] = read_csv(
             verlet_path
